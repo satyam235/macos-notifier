@@ -73,8 +73,12 @@ class PanelController: NSObject {
         
         iconView = NSImageView()
         iconView.translatesAutoresizingMaskIntoConstraints = false
-        iconView.image = NSImage(named: NSImage.cautionName)
-        iconView.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 30, weight: .regular)
+        if let custom = NSImage(named: "SecOpsIcon") {
+            iconView.image = custom
+        } else {
+            iconView.image = NSImage(named: NSImage.cautionName)
+            iconView.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 30, weight: .regular)
+        }
         
         titleLabel = makeLabel(font: .systemFont(ofSize: 14, weight: .semibold),
                                color: .labelColor, lines: 1)
