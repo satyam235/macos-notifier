@@ -7,8 +7,8 @@ class PanelController: NSObject {
     private var timer: DispatchSourceTimer?
     
     private let panelWidth: CGFloat = 340
-    private let topMargin: CGFloat = 12
-    private let rightMargin: CGFloat = 16
+    private let topMargin: CGFloat = 24   // fixed margin from top
+    private let rightMargin: CGFloat = 24 // fixed margin from right
     private let cornerRadius: CGFloat = 14
     
     private var panel: NSPanel!
@@ -27,7 +27,7 @@ class PanelController: NSObject {
         self.state = state
         self.logger = logger
         self.config = config
-        super.init()
+    super.init()
         buildUI()
         configureMenu()
         startTimer()
@@ -222,6 +222,7 @@ class PanelController: NSObject {
         // Hide countdown label when graceful & delays available (Python hides timer_label in that condition)
         if cfg.rebootConfig == .graceful && cfg.delayCounter > 0 { countdownLabel.isHidden = true }
     }
+
     
     private func quitApp() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
