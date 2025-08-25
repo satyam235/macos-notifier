@@ -1,7 +1,7 @@
 {
   "images" : [
-    { "idiom" : "mac", "scale" : "1x", "filename" : "SecOpsIcon.png" },
-    { "idiom" : "mac", "scale" : "2x", "filename" : "SecOpsIcon@2x.png" }
+    { "idiom" : "mac", "scale" : "1x", "filename" : "secops_logo.png" },
+    { "idiom" : "mac", "scale" : "2x", "filename" : "secops_logo@2x.png" }
   ],
   "info" : { "version" : 1, "author" : "xcode" }
 }
