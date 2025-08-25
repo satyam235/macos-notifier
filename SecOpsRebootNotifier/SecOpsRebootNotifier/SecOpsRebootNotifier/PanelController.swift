@@ -7,8 +7,8 @@ class PanelController: NSObject {
     private var timer: DispatchSourceTimer?
     
     private let panelWidth: CGFloat = 360
-    private let topMargin: CGFloat = 32   // refined margin from top
-    private let rightMargin: CGFloat = 32 // refined margin from right
+    private let topMargin: CGFloat = 12   // tighter margin from top for true top-right feel
+    private let rightMargin: CGFloat = 12 // tighter margin from right
     private let cornerRadius: CGFloat = 16
     private var initialTotalSeconds: Int
     
