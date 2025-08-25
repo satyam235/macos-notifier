@@ -224,8 +224,13 @@ class PanelController: NSObject {
             // Decrement remaining time each second
             self.state.tick()
             let remaining = self.state.remainingSeconds
+            if remaining <= 60 {
+                self.countdownLabel.textColor = .systemRed
+            } else if self.countdownLabel.textColor == .systemRed {
+                // restore accent styling when crossing back above a minute (unlikely but defensive)
+                self.countdownLabel.textColor = NSColor.controlAccentColor.withAlphaComponent(0.85)
+            }
             self.updateCountdownLabel()
-            if remaining <= 60 { self.countdownLabel.textColor = .systemRed }
             if remaining <= 0 {
                 self.timer?.cancel()
                 // Auto behavior: if delay available, auto-apply smallest, persist, log, and exit; else reboot now.
@@ -377,13 +382,13 @@ private extension PanelController {
 
     func updateCountdownLabel() {
         let base = formattedCountdown() // e.g., "Auto reboot in 04:55 minutes."
-        // Highlight the time segment (digits + colon) using monospaced digits, slightly stronger color.
+        let remaining = state.remainingSeconds
         let timeRegex = try? NSRegularExpression(pattern: "\\d{1,2}:\\d{2}")
         let attr = NSMutableAttributedString(string: base, attributes: [
             .font: countdownLabel.font as Any,
             .foregroundColor: countdownLabel.textColor as Any
         ])
-        if let re = timeRegex {
+        if remaining > 60, let re = timeRegex { // only accent-highlight when not in critical (<60s)
             let range = NSRange(location: 0, length: (base as NSString).length)
             if let match = re.firstMatch(in: base, range: range) {
                 attr.addAttributes([
