@@ -73,7 +73,7 @@ final class ConfigManager {
         }
     }
     
-    private func mutate(_ block: (inout [String: Any]) -> Void) {
+    private func mutate(_ block: @escaping (inout [String: Any]) -> Void) {
         queue.async(flags: .barrier) {
             block(&self.store)
             self.persistLocked()
