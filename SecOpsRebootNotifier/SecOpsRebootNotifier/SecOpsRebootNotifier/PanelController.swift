@@ -15,6 +15,7 @@ class PanelController: NSObject {
     private var panel: NSPanel!
     private var backgroundView: NSVisualEffectView!
     
+    private var iconContainer: NSView!
     private var iconView: NSImageView!
     private var titleLabel: NSTextField!
     private var bodyLabel: NSTextField!
@@ -79,15 +80,23 @@ class PanelController: NSObject {
     backgroundView.layer?.shadowOffset = CGSize(width: 0, height: -1)
         panel.contentView?.addSubview(backgroundView)
         
+    // Icon container for subtle background + border ring
+    iconContainer = NSView()
+    iconContainer.translatesAutoresizingMaskIntoConstraints = false
+    iconContainer.wantsLayer = true
+    iconContainer.layer?.cornerRadius = 24
+    iconContainer.layer?.masksToBounds = true
+    let accent = NSColor.controlAccentColor
+    iconContainer.layer?.backgroundColor = accent.withAlphaComponent(0.08).cgColor
+    iconContainer.layer?.borderColor = accent.withAlphaComponent(0.25).cgColor
+    iconContainer.layer?.borderWidth = 1
+
     iconView = NSImageView()
     iconView.translatesAutoresizingMaskIntoConstraints = false
     iconView.imageScaling = .scaleProportionallyUpOrDown
-    iconView.wantsLayer = true
-    iconView.layer?.cornerRadius = 22
-    iconView.layer?.masksToBounds = true
-    iconView.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.18).cgColor
-    // Mandatory SecOps icon (ensure Assets.xcassets contains SecOpsIcon.imageset with required sizes)
+    iconView.wantsLayer = false
     iconView.image = NSImage(named: "SecOpsIcon")
+    iconContainer.addSubview(iconView)
         
     titleLabel = makeLabel(font: .systemFont(ofSize: 15, weight: .semibold),
                                color: .labelColor, lines: 1)
@@ -126,16 +135,9 @@ class PanelController: NSObject {
         textStack.addArrangedSubview(bodyLabel)
         textStack.addArrangedSubview(countdownLabel)
         
-    backgroundView.addSubview(iconView)
+    backgroundView.addSubview(iconContainer)
     backgroundView.addSubview(textStack)
     backgroundView.addSubview(buttonStack)
-
-    // Divider
-    let divider = NSView()
-    divider.translatesAutoresizingMaskIntoConstraints = false
-    divider.wantsLayer = true
-    divider.layer?.backgroundColor = NSColor.separatorColor.withAlphaComponent(0.35).cgColor
-    backgroundView.addSubview(divider)
 
     // Progress bar
     let progress = NSProgressIndicator()
@@ -157,21 +159,20 @@ class PanelController: NSObject {
     bodyLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         
         NSLayoutConstraint.activate([
-            iconView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20),
-            iconView.topAnchor.constraint(greaterThanOrEqualTo: backgroundView.topAnchor, constant: 20),
-            iconView.widthAnchor.constraint(equalToConstant: 44),
-            iconView.heightAnchor.constraint(equalToConstant: 44),
+            iconContainer.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20),
+            iconContainer.topAnchor.constraint(greaterThanOrEqualTo: backgroundView.topAnchor, constant: 20),
+            iconContainer.widthAnchor.constraint(equalToConstant: 48),
+            iconContainer.heightAnchor.constraint(equalToConstant: 48),
 
-            textStack.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 12),
+            iconView.centerXAnchor.constraint(equalTo: iconContainer.centerXAnchor),
+            iconView.centerYAnchor.constraint(equalTo: iconContainer.centerYAnchor),
+            iconView.widthAnchor.constraint(equalToConstant: 36),
+            iconView.heightAnchor.constraint(equalToConstant: 36),
+
+            textStack.leadingAnchor.constraint(equalTo: iconContainer.trailingAnchor, constant: 12),
             textStack.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 20),
             textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
-
-            divider.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: 16),
-            divider.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
-            divider.trailingAnchor.constraint(equalTo: textStack.trailingAnchor),
-            divider.heightAnchor.constraint(equalToConstant: 1),
-
-            buttonStack.topAnchor.constraint(equalTo: divider.bottomAnchor, constant: 12),
+            buttonStack.topAnchor.constraint(equalTo: progress.bottomAnchor, constant: 14),
             buttonStack.centerXAnchor.constraint(equalTo: backgroundView.centerXAnchor),
             buttonStack.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -20),
 
@@ -286,6 +287,10 @@ class PanelController: NSObject {
         }
     // Hide delay button when counter exhausted or forced
     if cfg.delayCounter == 0 || cfg.rebootConfig == .forceAfterPatch { delayButton.isHidden = true; rebootButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 140).isActive = true }
+    // Equalize button widths for consistent visual balance
+    rebootButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 118).isActive = true
+    delayButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 118).isActive = true
+    rebootButton.widthAnchor.constraint(equalTo: delayButton.widthAnchor).isActive = true
     // Always show countdown label per new requirement
     countdownLabel.isHidden = false
     bodyLabel.stringValue = enforceMessageLimit(bodyLabel.stringValue)
@@ -375,13 +380,17 @@ private extension PanelController {
     }
     func animateIntro() {
         let target = panel.frame
-        // Start slightly above and faded out, then drop into place
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            panel.alphaValue = 1
+            panel.setFrame(target, display: true)
+            return
+        }
         var start = target
         start.origin.y += 10
         panel.setFrame(start, display: false)
         panel.alphaValue = 0
         NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.25
+            ctx.duration = 0.28
             ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
             panel.animator().alphaValue = 1
             panel.animator().setFrame(target, display: true)
