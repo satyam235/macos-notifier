@@ -223,12 +223,13 @@ class PanelController: NSObject {
             if remaining <= 60 { self.countdownLabel.textColor = .systemRed }
             if remaining <= 0 {
                 self.timer?.cancel()
-                // Auto behavior: if delay available, auto-apply smallest; else reboot
+                // Auto behavior: if delay available, auto-apply smallest, persist, log, and exit; else reboot now.
                 if let cfg = self.config, cfg.delayCounter > 0, let smallest = self.state.allowedDelayOptions.min() {
-                    _ = self.state.applyDelay(smallest)
-                    self.config?.applyDelay(seconds: smallest)
-                    self.countdownLabel.textColor = NSColor.controlAccentColor.withAlphaComponent(0.75)
-                    self.startTimer() // restart timer
+                    if self.state.applyDelay(smallest) {
+                        self.config?.applyDelay(seconds: smallest)
+                        self.logger.log(action: .delay(seconds: smallest), state: self.state)
+                    }
+                    self.quitApp()
                 } else {
                     self.rebootNow()
                 }
