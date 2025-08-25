@@ -6,10 +6,11 @@ class PanelController: NSObject {
     private let config: ConfigManager?
     private var timer: DispatchSourceTimer?
     
-    private let panelWidth: CGFloat = 340
-    private let topMargin: CGFloat = 24   // fixed margin from top
-    private let rightMargin: CGFloat = 24 // fixed margin from right
-    private let cornerRadius: CGFloat = 14
+    private let panelWidth: CGFloat = 360
+    private let topMargin: CGFloat = 32   // refined margin from top
+    private let rightMargin: CGFloat = 32 // refined margin from right
+    private let cornerRadius: CGFloat = 16
+    private var initialTotalSeconds: Int
     
     private var panel: NSPanel!
     private var backgroundView: NSVisualEffectView!
@@ -24,9 +25,10 @@ class PanelController: NSObject {
     private var delayMenuController: DelayMenuController!
     
     init(state: RebootState, logger: ActionLogger, config: ConfigManager? = nil) {
-        self.state = state
+    self.state = state
         self.logger = logger
         self.config = config
+    self.initialTotalSeconds = state.remainingSeconds
     super.init()
         buildUI()
         configureMenu()
@@ -34,6 +36,7 @@ class PanelController: NSObject {
         writeInitialState()
         observeScreenChanges()
         applyConfigVisuals()
+    animateIntro()
     }
     
     deinit {
@@ -64,35 +67,41 @@ class PanelController: NSObject {
         
         backgroundView = NSVisualEffectView(frame: panel.contentView!.bounds)
         backgroundView.autoresizingMask = [.width, .height]
-        backgroundView.material = .underWindowBackground
+    backgroundView.material = .hudWindow
         backgroundView.state = .active
         backgroundView.wantsLayer = true
         backgroundView.layer?.cornerRadius = cornerRadius
         backgroundView.layer?.masksToBounds = true
+    backgroundView.layer?.shadowColor = NSColor.black.cgColor
+    backgroundView.layer?.shadowOpacity = 0.18
+    backgroundView.layer?.shadowRadius = 16
+    backgroundView.layer?.shadowOffset = CGSize(width: 0, height: -1)
         panel.contentView?.addSubview(backgroundView)
         
     iconView = NSImageView()
     iconView.translatesAutoresizingMaskIntoConstraints = false
     iconView.imageScaling = .scaleProportionallyUpOrDown
     iconView.wantsLayer = true
-    iconView.layer?.cornerRadius = 6
+    iconView.layer?.cornerRadius = 22
     iconView.layer?.masksToBounds = true
-    iconView.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.25).cgColor
+    iconView.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.18).cgColor
     // Mandatory SecOps icon (ensure Assets.xcassets contains SecOpsIcon.imageset with required sizes)
     iconView.image = NSImage(named: "SecOpsIcon")
         
-        titleLabel = makeLabel(font: .systemFont(ofSize: 14, weight: .semibold),
+    titleLabel = makeLabel(font: .systemFont(ofSize: 15, weight: .semibold),
                                color: .labelColor, lines: 1)
     titleLabel.stringValue = "Device Will Reboot Shortly"
         
     // Body label wraps to at most 2 lines (<=100 chars) then countdown appears below.
-    bodyLabel = makeLabel(font: .systemFont(ofSize: 12),
+    bodyLabel = makeLabel(font: .systemFont(ofSize: 13),
                   color: .secondaryLabelColor, lines: 2, wrap: true)
     bodyLabel.stringValue = enforceMessageLimit(config?.customMessage ?? "Reboot required to complete important updates.")
         
-        countdownLabel = makeLabel(font: .systemFont(ofSize: 11),
-                                   color: .tertiaryLabelColor, lines: 1)
+    countdownLabel = makeLabel(font: .systemFont(ofSize: 12, weight: .medium),
+                   color: NSColor.labelColor.withAlphaComponent(0.65), lines: 1)
         countdownLabel.stringValue = formattedCountdown()
+    applyParagraphStyle(to: bodyLabel)
+    applyParagraphStyle(to: countdownLabel, tighten: true)
         
         rebootButton = MiniActionButton(title: "Reboot Now", style: .primary) { [weak self] in
             self?.rebootNow()
@@ -101,48 +110,79 @@ class PanelController: NSObject {
             self?.showDelayMenu()
         }
         
-        let buttonStack = NSStackView(views: [rebootButton, delayButton])
+    let buttonStack = NSStackView(views: [rebootButton, delayButton])
         buttonStack.orientation = .horizontal
         buttonStack.alignment = .centerY
-        buttonStack.spacing = 8
+    buttonStack.spacing = 12
         buttonStack.translatesAutoresizingMaskIntoConstraints = false
         
         let textStack = NSStackView()
         textStack.orientation = .vertical
         textStack.alignment = .leading
-        textStack.spacing = 2
+    textStack.spacing = 3
         textStack.translatesAutoresizingMaskIntoConstraints = false
         textStack.addArrangedSubview(titleLabel)
         textStack.addArrangedSubview(bodyLabel)
         textStack.addArrangedSubview(countdownLabel)
         
-        backgroundView.addSubview(iconView)
-        backgroundView.addSubview(textStack)
-        backgroundView.addSubview(buttonStack)
+    backgroundView.addSubview(iconView)
+    backgroundView.addSubview(textStack)
+    backgroundView.addSubview(buttonStack)
+
+    // Divider
+    let divider = NSView()
+    divider.translatesAutoresizingMaskIntoConstraints = false
+    divider.wantsLayer = true
+    divider.layer?.backgroundColor = NSColor.separatorColor.withAlphaComponent(0.35).cgColor
+    backgroundView.addSubview(divider)
+
+    // Progress bar
+    let progress = NSProgressIndicator()
+    progress.translatesAutoresizingMaskIntoConstraints = false
+    progress.isIndeterminate = false
+    progress.minValue = 0
+    progress.maxValue = Double(initialTotalSeconds)
+    progress.doubleValue = Double(state.remainingSeconds)
+    progress.controlSize = .small
+    progress.style = .bar
+    progress.wantsLayer = true
+    progress.layer?.cornerRadius = 2
+    backgroundView.addSubview(progress)
+    self.progressIndicator = progress
 
     // Constrain text width so content wraps instead of forcing panel wider than intended.
-    let maxTextWidth = panelWidth - 14 /*left padding*/ - 32 /*icon width original baseline*/ - 12 /*gap*/ - 14 /*right padding*/
+    let maxTextWidth = panelWidth - 20 /*left padding*/ - 44 /*icon width*/ - 12 /*gap*/ - 20 /*right padding*/
     textStack.widthAnchor.constraint(lessThanOrEqualToConstant: maxTextWidth).isActive = true
     bodyLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         
         NSLayoutConstraint.activate([
-            iconView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 14),
-            iconView.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 14),
-            iconView.widthAnchor.constraint(equalToConstant: 40),
-            iconView.heightAnchor.constraint(equalToConstant: 40),
-            
+            iconView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20),
+            iconView.topAnchor.constraint(greaterThanOrEqualTo: backgroundView.topAnchor, constant: 20),
+            iconView.widthAnchor.constraint(equalToConstant: 44),
+            iconView.heightAnchor.constraint(equalToConstant: 44),
+
             textStack.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 12),
-            textStack.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 12),
-            textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -14),
-            
-            buttonStack.topAnchor.constraint(greaterThanOrEqualTo: textStack.bottomAnchor, constant: 10),
-            buttonStack.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
-            buttonStack.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -12),
-            buttonStack.trailingAnchor.constraint(lessThanOrEqualTo: backgroundView.trailingAnchor, constant: -14),
+            textStack.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 20),
+            textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
+
+            divider.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: 16),
+            divider.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
+            divider.trailingAnchor.constraint(equalTo: textStack.trailingAnchor),
+            divider.heightAnchor.constraint(equalToConstant: 1),
+
+            buttonStack.topAnchor.constraint(equalTo: divider.bottomAnchor, constant: 12),
+            buttonStack.centerXAnchor.constraint(equalTo: backgroundView.centerXAnchor),
+            buttonStack.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -20),
+
+            progress.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
+            progress.trailingAnchor.constraint(equalTo: textStack.trailingAnchor),
+            progress.topAnchor.constraint(equalTo: countdownLabel.bottomAnchor, constant: 6),
+            progress.heightAnchor.constraint(equalToConstant: 4),
         ])
         
         panel.contentView?.layoutSubtreeIfNeeded()
-        let requiredHeight = buttonStack.frame.maxY + 12
+    panel.contentView?.layoutSubtreeIfNeeded()
+    let requiredHeight = buttonStack.frame.maxY + 20
         var frame = panel.frame
         frame.size.height = max(requiredHeight, 118)
         panel.setFrame(frame, display: false)
@@ -185,6 +225,7 @@ class PanelController: NSObject {
             self.state.tick()
             let remaining = self.state.remainingSeconds
             self.countdownLabel.stringValue = self.formattedCountdown()
+            self.progressIndicator?.doubleValue = Double(self.state.remainingSeconds)
             if remaining <= 60 { self.countdownLabel.textColor = .systemRed }
             if remaining <= 0 {
                 self.timer?.cancel()
@@ -204,7 +245,7 @@ class PanelController: NSObject {
     }
     
     private func formattedCountdown() -> String {
-        "Your system will reboot in \(CountdownFormatter.string(from: state.remainingSeconds))."
+    "Auto reboot in \(CountdownFormatter.string(from: state.remainingSeconds))."
     }
     
     private func rebootNow() {
@@ -315,6 +356,31 @@ private extension PanelController {
             s = String(s[..<idx]).trimmingCharacters(in: .whitespacesAndNewlines) + "…"
         }
         return s
+    }
+}
+
+// MARK: - Typography helpers & animation
+private extension PanelController {
+    func applyParagraphStyle(to label: NSTextField, tighten: Bool = false) {
+        let ps = NSMutableParagraphStyle()
+        ps.lineBreakMode = label.lineBreakMode
+        ps.lineHeightMultiple = tighten ? 1.05 : 1.15
+        let attr = NSAttributedString(string: label.stringValue, attributes: [
+            .font: label.font as Any,
+            .foregroundColor: label.textColor as Any,
+            .paragraphStyle: ps
+        ])
+        label.attributedStringValue = attr
+    }
+    func animateIntro() {
+        panel.alphaValue = 0
+        panel.setFrame(panel.frame.offsetBy(dx: 0, dy: -6), display: false)
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.22
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            panel.animator().alphaValue = 1
+            panel.animator().setFrame(panel.frame.offsetBy(dx: 0, dy: 6), display: true)
+        }
     }
 }
 
