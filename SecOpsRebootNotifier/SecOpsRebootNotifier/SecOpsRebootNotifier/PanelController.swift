@@ -171,6 +171,8 @@ class PanelController: NSObject {
         t.schedule(deadline: .now(), repeating: 1)
         t.setEventHandler { [weak self] in
             guard let self else { return }
+            // Decrement remaining time each second
+            self.state.tick()
             let remaining = self.state.remainingSeconds
             self.countdownLabel.stringValue = self.formattedCountdown()
             if remaining <= 60 { self.countdownLabel.textColor = .systemRed }
