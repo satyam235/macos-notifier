@@ -7,12 +7,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         let arguments = CommandLine.arguments.dropFirst()
         let config = AppConfiguration.parse(from: Array(arguments))
-        // Determine config file path (mirror Python: /Library/Application Support (system) vs user). For simplicity we use ~/Library/Application Support.
-        let fm = FileManager.default
-        let base = fm.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/SecOpsNotifierService", isDirectory: true)
-        try? fm.createDirectory(at: base, withIntermediateDirectories: true)
-        let cfgPath = base.appendingPathComponent("SecOpsNotifierConfig.json").path
+    // Config file now fixed in /tmp for both reading & writing.
+    let cfgPath = "/tmp/SecOpsNotifierConfig.json"
         let cfgMgr = ConfigManager(path: cfgPath)
         self.configManager = cfgMgr
         
