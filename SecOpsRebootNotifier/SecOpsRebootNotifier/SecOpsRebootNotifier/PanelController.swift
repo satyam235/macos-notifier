@@ -15,7 +15,7 @@ class PanelController: NSObject {
     private var panel: NSPanel!
     private var backgroundView: NSVisualEffectView!
     
-    private var iconContainer: NSView!
+    private var iconContainer: NSView! // kept for layout grouping, now transparent
     private var iconView: NSImageView!
     private var titleLabel: NSTextField!
     private var bodyLabel: NSTextField!
@@ -84,16 +84,15 @@ class PanelController: NSObject {
     iconContainer = NSView()
     iconContainer.translatesAutoresizingMaskIntoConstraints = false
     iconContainer.wantsLayer = true
-    iconContainer.layer?.cornerRadius = 24
-    iconContainer.layer?.masksToBounds = true
-    let accent = NSColor.controlAccentColor
-    iconContainer.layer?.backgroundColor = accent.withAlphaComponent(0.08).cgColor
-    iconContainer.layer?.borderColor = accent.withAlphaComponent(0.25).cgColor
-    iconContainer.layer?.borderWidth = 1
+    iconContainer.layer?.cornerRadius = 0
+    iconContainer.layer?.masksToBounds = false
+    // Remove circular accent styling per request (transparent container)
+    iconContainer.layer?.backgroundColor = NSColor.clear.cgColor
+    iconContainer.layer?.borderWidth = 0
 
     iconView = NSImageView()
     iconView.translatesAutoresizingMaskIntoConstraints = false
-    iconView.imageScaling = .scaleProportionallyUpOrDown
+    iconView.imageScaling = .scaleProportionallyDown
     iconView.wantsLayer = false
     iconView.image = NSImage(named: "SecOpsIcon")
     iconContainer.addSubview(iconView)
@@ -154,31 +153,31 @@ class PanelController: NSObject {
     self.progressIndicator = progress
 
     // Constrain text width so content wraps instead of forcing panel wider than intended.
-    let maxTextWidth = panelWidth - 20 /*left padding*/ - 44 /*icon width*/ - 12 /*gap*/ - 20 /*right padding*/
+    let maxTextWidth = panelWidth - 20 /*left padding*/ - 40 /*icon width*/ - 12 /*gap*/ - 20 /*right padding*/
     textStack.widthAnchor.constraint(lessThanOrEqualToConstant: maxTextWidth).isActive = true
     bodyLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         
         NSLayoutConstraint.activate([
             iconContainer.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20),
-            iconContainer.topAnchor.constraint(greaterThanOrEqualTo: backgroundView.topAnchor, constant: 20),
-            iconContainer.widthAnchor.constraint(equalToConstant: 48),
-            iconContainer.heightAnchor.constraint(equalToConstant: 48),
+            iconContainer.topAnchor.constraint(greaterThanOrEqualTo: backgroundView.topAnchor, constant: 14),
+            iconContainer.widthAnchor.constraint(equalToConstant: 40),
+            iconContainer.heightAnchor.constraint(equalToConstant: 40),
 
             iconView.centerXAnchor.constraint(equalTo: iconContainer.centerXAnchor),
             iconView.centerYAnchor.constraint(equalTo: iconContainer.centerYAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 36),
-            iconView.heightAnchor.constraint(equalToConstant: 36),
+            iconView.widthAnchor.constraint(equalToConstant: 32),
+            iconView.heightAnchor.constraint(equalToConstant: 32),
 
             textStack.leadingAnchor.constraint(equalTo: iconContainer.trailingAnchor, constant: 12),
-            textStack.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 20),
+            textStack.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 14),
             textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
-            buttonStack.topAnchor.constraint(equalTo: progress.bottomAnchor, constant: 14),
+            buttonStack.topAnchor.constraint(equalTo: progress.bottomAnchor, constant: 10),
             buttonStack.centerXAnchor.constraint(equalTo: backgroundView.centerXAnchor),
-            buttonStack.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -20),
+            buttonStack.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -14),
 
             progress.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
             progress.trailingAnchor.constraint(equalTo: textStack.trailingAnchor),
-            progress.topAnchor.constraint(equalTo: countdownLabel.bottomAnchor, constant: 6),
+            progress.topAnchor.constraint(equalTo: countdownLabel.bottomAnchor, constant: 4),
             progress.heightAnchor.constraint(equalToConstant: 4),
         ])
         
