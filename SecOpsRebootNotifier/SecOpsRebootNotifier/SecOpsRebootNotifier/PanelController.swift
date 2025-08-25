@@ -71,8 +71,13 @@ class PanelController: NSObject {
         backgroundView.layer?.masksToBounds = true
         panel.contentView?.addSubview(backgroundView)
         
-        iconView = NSImageView()
-        iconView.translatesAutoresizingMaskIntoConstraints = false
+    iconView = NSImageView()
+    iconView.translatesAutoresizingMaskIntoConstraints = false
+    iconView.imageScaling = .scaleProportionallyUpOrDown
+    iconView.wantsLayer = true
+    iconView.layer?.cornerRadius = 6
+    iconView.layer?.masksToBounds = true
+    iconView.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.25).cgColor
     // Mandatory SecOps icon (ensure Assets.xcassets contains SecOpsIcon.imageset with required sizes)
     iconView.image = NSImage(named: "SecOpsIcon")
         
@@ -118,8 +123,8 @@ class PanelController: NSObject {
         NSLayoutConstraint.activate([
             iconView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 14),
             iconView.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 14),
-            iconView.widthAnchor.constraint(equalToConstant: 32),
-            iconView.heightAnchor.constraint(equalToConstant: 32),
+            iconView.widthAnchor.constraint(equalToConstant: 40),
+            iconView.heightAnchor.constraint(equalToConstant: 40),
             
             textStack.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 12),
             textStack.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 12),
