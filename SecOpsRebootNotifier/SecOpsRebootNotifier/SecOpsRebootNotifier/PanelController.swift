@@ -176,7 +176,15 @@ class PanelController: NSObject {
             if remaining <= 60 { self.countdownLabel.textColor = .systemRed }
             if remaining <= 0 {
                 self.timer?.cancel()
-                self.handleExpiration()
+                // Auto behavior: if delay available, auto-apply smallest; else reboot
+                if let cfg = self.config, cfg.delayCounter > 0, let smallest = self.state.allowedDelayOptions.min() {
+                    _ = self.state.applyDelay(smallest)
+                    self.config?.applyDelay(seconds: smallest)
+                    self.countdownLabel.textColor = .tertiaryLabelColor
+                    self.startTimer() // restart timer
+                } else {
+                    self.rebootNow()
+                }
             }
         }
         timer = t
@@ -208,10 +216,8 @@ class PanelController: NSObject {
         }
     }
     
-    private func handleExpiration() {
-        logger.log(action: .expired, state: state)
-        quitApp()
-    }
+    // No longer used: expiration now maps to rebootNow
+    private func handleExpiration() { rebootNow() }
 
     private func applyConfigVisuals() {
         guard let cfg = config else { return }
