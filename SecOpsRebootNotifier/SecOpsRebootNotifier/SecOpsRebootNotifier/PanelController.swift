@@ -119,6 +119,11 @@ class PanelController: NSObject {
         backgroundView.addSubview(iconView)
         backgroundView.addSubview(textStack)
         backgroundView.addSubview(buttonStack)
+
+    // Constrain text width so content wraps instead of forcing panel wider than intended.
+    let maxTextWidth = panelWidth - 14 /*left padding*/ - 32 /*icon width original baseline*/ - 12 /*gap*/ - 14 /*right padding*/
+    textStack.widthAnchor.constraint(lessThanOrEqualToConstant: maxTextWidth).isActive = true
+    bodyLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         
         NSLayoutConstraint.activate([
             iconView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 14),
@@ -273,7 +278,13 @@ class PanelController: NSObject {
     let minY = vf.minY + topMargin
     if originY < minY { originY = minY }
     frame.origin = CGPoint(x: originX, y: originY)
+    // Final clamp in case of dynamic later width changes
+    if frame.maxX > vf.maxX - rightMargin { frame.origin.x = vf.maxX - rightMargin - frame.width }
+    if frame.origin.x < vf.minX + rightMargin { frame.origin.x = vf.minX + rightMargin }
+    if frame.maxY > vf.maxY - topMargin { frame.origin.y = vf.maxY - topMargin - frame.height }
+    if frame.origin.y < vf.minY + topMargin { frame.origin.y = vf.minY + topMargin }
     panel.setFrame(frame, display: true)
+    panel.displayIfNeeded()
     }
     
     private func observeScreenChanges() {
