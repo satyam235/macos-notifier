@@ -36,8 +36,7 @@ class PanelController: NSObject {
         startTimer()
         writeInitialState()
         observeScreenChanges()
-        applyConfigVisuals()
-    animateIntro()
+    applyConfigVisuals()
     }
     
     deinit {
@@ -46,6 +45,7 @@ class PanelController: NSObject {
     
     func show() {
         layoutAndReposition()
+        animateIntro()
         panel.orderFrontRegardless()
     }
     
@@ -374,13 +374,17 @@ private extension PanelController {
         label.attributedStringValue = attr
     }
     func animateIntro() {
+        let target = panel.frame
+        // Start slightly above and faded out, then drop into place
+        var start = target
+        start.origin.y += 10
+        panel.setFrame(start, display: false)
         panel.alphaValue = 0
-        panel.setFrame(panel.frame.offsetBy(dx: 0, dy: -6), display: false)
         NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.22
+            ctx.duration = 0.25
             ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
             panel.animator().alphaValue = 1
-            panel.animator().setFrame(panel.frame.offsetBy(dx: 0, dy: 6), display: true)
+            panel.animator().setFrame(target, display: true)
         }
     }
 }
