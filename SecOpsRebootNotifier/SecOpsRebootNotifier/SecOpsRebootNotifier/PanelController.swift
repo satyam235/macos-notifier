@@ -22,7 +22,7 @@ class PanelController: NSObject {
     private var countdownLabel: NSTextField!
     private var rebootButton: MiniActionButton!
     private var delayButton: MiniActionButton!
-    private var progressIndicator: NSProgressIndicator?
+    // progress indicator removed
     
     private var delayMenuController: DelayMenuController!
     
@@ -106,8 +106,8 @@ class PanelController: NSObject {
                   color: .secondaryLabelColor, lines: 2, wrap: true)
     bodyLabel.stringValue = enforceMessageLimit(config?.customMessage ?? "Reboot required to complete important updates.")
         
-    countdownLabel = makeLabel(font: .systemFont(ofSize: 11, weight: .medium),
-                   color: NSColor.labelColor.withAlphaComponent(0.65), lines: 1)
+    countdownLabel = makeLabel(font: .systemFont(ofSize: 11, weight: .semibold),
+                   color: NSColor.controlAccentColor.withAlphaComponent(0.85), lines: 1)
         countdownLabel.stringValue = formattedCountdown()
     applyParagraphStyle(to: bodyLabel)
     applyParagraphStyle(to: countdownLabel, tighten: true)
@@ -138,19 +138,7 @@ class PanelController: NSObject {
     backgroundView.addSubview(textStack)
     backgroundView.addSubview(buttonStack)
 
-    // Progress bar
-    let progress = NSProgressIndicator()
-    progress.translatesAutoresizingMaskIntoConstraints = false
-    progress.isIndeterminate = false
-    progress.minValue = 0
-    progress.maxValue = Double(initialTotalSeconds)
-    progress.doubleValue = Double(state.remainingSeconds)
-    progress.controlSize = .small
-    progress.style = .bar
-    progress.wantsLayer = true
-    progress.layer?.cornerRadius = 2
-    backgroundView.addSubview(progress)
-    self.progressIndicator = progress
+    // (Progress bar removed per design change)
 
     // Constrain text width so content wraps instead of forcing panel wider than intended.
     let maxTextWidth = panelWidth - 20 /*left padding*/ - 40 /*icon width*/ - 12 /*gap*/ - 20 /*right padding*/
@@ -165,20 +153,17 @@ class PanelController: NSObject {
 
             iconView.centerXAnchor.constraint(equalTo: iconContainer.centerXAnchor),
             iconView.centerYAnchor.constraint(equalTo: iconContainer.centerYAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 32),
-            iconView.heightAnchor.constraint(equalToConstant: 32),
+            iconView.widthAnchor.constraint(equalToConstant: 38),
+            iconView.heightAnchor.constraint(equalToConstant: 38),
 
             textStack.leadingAnchor.constraint(equalTo: iconContainer.trailingAnchor, constant: 12),
             textStack.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 10),
             textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
-            buttonStack.topAnchor.constraint(equalTo: progress.bottomAnchor, constant: 8),
+            buttonStack.topAnchor.constraint(equalTo: countdownLabel.bottomAnchor, constant: 8),
             buttonStack.centerXAnchor.constraint(equalTo: backgroundView.centerXAnchor),
             buttonStack.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -10),
 
-            progress.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
-            progress.trailingAnchor.constraint(equalTo: textStack.trailingAnchor),
-            progress.topAnchor.constraint(equalTo: countdownLabel.bottomAnchor, constant: 3),
-            progress.heightAnchor.constraint(equalToConstant: 3),
+            // progress constraints removed
         ])
         
         panel.contentView?.layoutSubtreeIfNeeded()
@@ -226,7 +211,6 @@ class PanelController: NSObject {
             self.state.tick()
             let remaining = self.state.remainingSeconds
             self.countdownLabel.stringValue = self.formattedCountdown()
-            self.progressIndicator?.doubleValue = Double(self.state.remainingSeconds)
             if remaining <= 60 { self.countdownLabel.textColor = .systemRed }
             if remaining <= 0 {
                 self.timer?.cancel()
@@ -234,7 +218,7 @@ class PanelController: NSObject {
                 if let cfg = self.config, cfg.delayCounter > 0, let smallest = self.state.allowedDelayOptions.min() {
                     _ = self.state.applyDelay(smallest)
                     self.config?.applyDelay(seconds: smallest)
-                    self.countdownLabel.textColor = .tertiaryLabelColor
+                    self.countdownLabel.textColor = NSColor.controlAccentColor.withAlphaComponent(0.75)
                     self.startTimer() // restart timer
                 } else {
                     self.rebootNow()
@@ -261,7 +245,7 @@ class PanelController: NSObject {
             return
         }
         logger.log(action: .delay(seconds: seconds), state: state)
-        countdownLabel.textColor = .tertiaryLabelColor
+    countdownLabel.textColor = NSColor.controlAccentColor.withAlphaComponent(0.75)
         countdownLabel.stringValue = formattedCountdown()
         config?.applyDelay(seconds: seconds)
         // After applying delay, also decrement local visual state of remaining delay_counter if present.
