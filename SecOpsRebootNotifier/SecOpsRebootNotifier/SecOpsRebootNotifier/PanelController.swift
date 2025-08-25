@@ -246,13 +246,20 @@ class PanelController: NSObject {
             panel.center()
             return
         }
-        let size = panel.frame.size
-        let vf = screen.visibleFrame
-        let origin = CGPoint(
-            x: vf.maxX - size.width - rightMargin,
-            y: vf.maxY - size.height - topMargin
-        )
-        panel.setFrame(NSRect(origin: origin, size: size), display: true)
+    var vf = screen.visibleFrame
+    var frame = panel.frame
+    // Ensure width fits inside screen with margins; shrink if necessary
+    let maxAllowedWidth = vf.width - (rightMargin * 2)
+    if frame.width > maxAllowedWidth { frame.size.width = max(260, maxAllowedWidth) }
+    // Recompute origin so panel is fully on-screen
+    var originX = vf.maxX - frame.width - rightMargin
+    let minX = vf.minX + rightMargin
+    if originX < minX { originX = minX }
+    var originY = vf.maxY - frame.height - topMargin
+    let minY = vf.minY + topMargin
+    if originY < minY { originY = minY }
+    frame.origin = CGPoint(x: originX, y: originY)
+    panel.setFrame(frame, display: true)
     }
     
     private func observeScreenChanges() {
