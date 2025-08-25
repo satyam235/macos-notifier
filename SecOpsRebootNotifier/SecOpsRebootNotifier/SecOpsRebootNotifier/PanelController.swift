@@ -97,16 +97,16 @@ class PanelController: NSObject {
     iconView.image = NSImage(named: "SecOpsIcon")
     iconContainer.addSubview(iconView)
         
-    titleLabel = makeLabel(font: .systemFont(ofSize: 15, weight: .semibold),
+    titleLabel = makeLabel(font: .systemFont(ofSize: 14, weight: .semibold),
                                color: .labelColor, lines: 1)
     titleLabel.stringValue = "Device Will Reboot Shortly"
         
     // Body label wraps to at most 2 lines (<=100 chars) then countdown appears below.
-    bodyLabel = makeLabel(font: .systemFont(ofSize: 13),
+    bodyLabel = makeLabel(font: .systemFont(ofSize: 12),
                   color: .secondaryLabelColor, lines: 2, wrap: true)
     bodyLabel.stringValue = enforceMessageLimit(config?.customMessage ?? "Reboot required to complete important updates.")
         
-    countdownLabel = makeLabel(font: .systemFont(ofSize: 12, weight: .medium),
+    countdownLabel = makeLabel(font: .systemFont(ofSize: 11, weight: .medium),
                    color: NSColor.labelColor.withAlphaComponent(0.65), lines: 1)
         countdownLabel.stringValue = formattedCountdown()
     applyParagraphStyle(to: bodyLabel)
@@ -128,7 +128,7 @@ class PanelController: NSObject {
         let textStack = NSStackView()
         textStack.orientation = .vertical
         textStack.alignment = .leading
-    textStack.spacing = 3
+    textStack.spacing = 2
         textStack.translatesAutoresizingMaskIntoConstraints = false
         textStack.addArrangedSubview(titleLabel)
         textStack.addArrangedSubview(bodyLabel)
@@ -159,7 +159,7 @@ class PanelController: NSObject {
         
         NSLayoutConstraint.activate([
             iconContainer.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20),
-            iconContainer.topAnchor.constraint(greaterThanOrEqualTo: backgroundView.topAnchor, constant: 14),
+            iconContainer.topAnchor.constraint(greaterThanOrEqualTo: backgroundView.topAnchor, constant: 10),
             iconContainer.widthAnchor.constraint(equalToConstant: 40),
             iconContainer.heightAnchor.constraint(equalToConstant: 40),
 
@@ -169,21 +169,21 @@ class PanelController: NSObject {
             iconView.heightAnchor.constraint(equalToConstant: 32),
 
             textStack.leadingAnchor.constraint(equalTo: iconContainer.trailingAnchor, constant: 12),
-            textStack.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 14),
+            textStack.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 10),
             textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
-            buttonStack.topAnchor.constraint(equalTo: progress.bottomAnchor, constant: 10),
+            buttonStack.topAnchor.constraint(equalTo: progress.bottomAnchor, constant: 8),
             buttonStack.centerXAnchor.constraint(equalTo: backgroundView.centerXAnchor),
-            buttonStack.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -14),
+            buttonStack.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -10),
 
             progress.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
             progress.trailingAnchor.constraint(equalTo: textStack.trailingAnchor),
-            progress.topAnchor.constraint(equalTo: countdownLabel.bottomAnchor, constant: 4),
-            progress.heightAnchor.constraint(equalToConstant: 4),
+            progress.topAnchor.constraint(equalTo: countdownLabel.bottomAnchor, constant: 3),
+            progress.heightAnchor.constraint(equalToConstant: 3),
         ])
         
         panel.contentView?.layoutSubtreeIfNeeded()
     panel.contentView?.layoutSubtreeIfNeeded()
-    let requiredHeight = buttonStack.frame.maxY + 20
+    let requiredHeight = buttonStack.frame.maxY + 12
         var frame = panel.frame
         frame.size.height = max(requiredHeight, 118)
         panel.setFrame(frame, display: false)
@@ -416,8 +416,8 @@ private final class MiniActionButton: NSButton {
         wantsLayer = true
         layer?.cornerRadius = 8
         layer?.masksToBounds = true
-        font = .systemFont(ofSize: 12, weight: .semibold)
-        heightAnchor.constraint(equalToConstant: 30).isActive = true
+    font = .systemFont(ofSize: 11, weight: .semibold)
+    heightAnchor.constraint(equalToConstant: 26).isActive = true
         updateAppearance(hover: false, pressed: false)
         
         addTrackingArea(NSTrackingArea(rect: .zero,
