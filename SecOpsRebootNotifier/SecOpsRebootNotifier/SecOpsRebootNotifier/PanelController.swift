@@ -115,7 +115,7 @@ class PanelController: NSObject {
                   color: .secondaryLabelColor, lines: 2, wrap: true)
     bodyLabel.stringValue = enforceMessageLimit(config?.customMessage ?? "Reboot required to complete important updates.")
         
-    countdownLabel = makeLabel(font: .systemFont(ofSize: 11, weight: .semibold),
+    countdownLabel = makeLabel(font: .monospacedDigitSystemFont(ofSize: 11, weight: .semibold),
                    color: NSColor.controlAccentColor.withAlphaComponent(0.85), lines: 1)
         countdownLabel.stringValue = formattedCountdown()
     applyParagraphStyle(to: bodyLabel)
@@ -127,6 +127,11 @@ class PanelController: NSObject {
         delayButton = MiniActionButton(title: "Delay Reboot", style: .secondary) { [weak self] in
             self?.showDelayMenu()
         }
+    rebootButton.setAccessibilityLabel("Reboot Now")
+    delayButton.setAccessibilityLabel("Delay Reboot")
+    countdownLabel.setAccessibilityLabel("Countdown until automatic reboot")
+    rebootButton.keyEquivalent = "\r"
+    delayButton.keyEquivalent = "d"
         
     let buttonStack = NSStackView(views: [rebootButton, delayButton])
         buttonStack.orientation = .horizontal
@@ -219,7 +224,7 @@ class PanelController: NSObject {
             // Decrement remaining time each second
             self.state.tick()
             let remaining = self.state.remainingSeconds
-            self.countdownLabel.stringValue = self.formattedCountdown()
+            self.updateCountdownLabel()
             if remaining <= 60 { self.countdownLabel.textColor = .systemRed }
             if remaining <= 0 {
                 self.timer?.cancel()
@@ -256,7 +261,7 @@ class PanelController: NSObject {
         }
         logger.log(action: .delay(seconds: seconds), state: state)
     countdownLabel.textColor = NSColor.controlAccentColor.withAlphaComponent(0.75)
-        countdownLabel.stringValue = formattedCountdown()
+        updateCountdownLabel()
         config?.applyDelay(seconds: seconds)
         // After applying delay, also decrement local visual state of remaining delay_counter if present.
         if let cfg = config {
@@ -368,6 +373,26 @@ private extension PanelController {
             s = String(s[..<idx]).trimmingCharacters(in: .whitespacesAndNewlines) + "…"
         }
         return s
+    }
+
+    func updateCountdownLabel() {
+        let base = formattedCountdown() // e.g., "Auto reboot in 04:55 minutes."
+        // Highlight the time segment (digits + colon) using monospaced digits, slightly stronger color.
+        let timeRegex = try? NSRegularExpression(pattern: "\\d{1,2}:\\d{2}")
+        let attr = NSMutableAttributedString(string: base, attributes: [
+            .font: countdownLabel.font as Any,
+            .foregroundColor: countdownLabel.textColor as Any
+        ])
+        if let re = timeRegex {
+            let range = NSRange(location: 0, length: (base as NSString).length)
+            if let match = re.firstMatch(in: base, range: range) {
+                attr.addAttributes([
+                    .foregroundColor: NSColor.controlAccentColor,
+                    .font: NSFont.monospacedDigitSystemFont(ofSize: countdownLabel.font?.pointSize ?? 11, weight: .bold)
+                ], range: match.range)
+            }
+        }
+        countdownLabel.attributedStringValue = attr
     }
 }
 
