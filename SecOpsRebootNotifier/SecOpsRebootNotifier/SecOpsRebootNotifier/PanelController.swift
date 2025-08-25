@@ -371,32 +371,34 @@ private extension PanelController {
         label.attributedStringValue = attr
     }
     func animateIntro() {
-        let target = panel.frame
+        let target = self.panel.frame
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            panel.alphaValue = 1
-            panel.setFrame(target, display: true)
+            self.panel.alphaValue = 1
+            self.panel.setFrame(target, display: true)
             return
         }
-        panel.contentView?.wantsLayer = true
+        self.panel.contentView?.wantsLayer = true
         var start = target
         start.origin.y += 6
-        panel.setFrame(start, display: false)
-        panel.alphaValue = 0
-        panel.contentView?.layer?.transform = CATransform3DMakeScale(0.98, 0.98, 1)
-        NSAnimationContext.runAnimationGroup { ctx in
+        self.panel.setFrame(start, display: false)
+        self.panel.alphaValue = 0
+        self.panel.contentView?.layer?.transform = CATransform3DMakeScale(0.98, 0.98, 1)
+        NSAnimationContext.runAnimationGroup { [weak self] ctx in
+            guard let self = self else { return }
             ctx.duration = 0.25
             ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            panel.animator().alphaValue = 1
-            panel.animator().setFrame(target, display: true)
-            DispatchQueue.main.async {
+            self.panel.animator().alphaValue = 1
+            self.panel.animator().setFrame(target, display: true)
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
                 CATransaction.begin()
                 let scaleAnim = CABasicAnimation(keyPath: "transform")
                 scaleAnim.fromValue = CATransform3DMakeScale(0.98, 0.98, 1)
                 scaleAnim.toValue = CATransform3DIdentity
                 scaleAnim.duration = 0.25
                 scaleAnim.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                panel.contentView?.layer?.add(scaleAnim, forKey: "scale")
-                panel.contentView?.layer?.transform = CATransform3DIdentity
+                self.panel.contentView?.layer?.add(scaleAnim, forKey: "scale")
+                self.panel.contentView?.layer?.transform = CATransform3DIdentity
                 CATransaction.commit()
             }
         }
