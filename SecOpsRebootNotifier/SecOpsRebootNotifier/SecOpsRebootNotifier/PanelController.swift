@@ -21,6 +21,7 @@ class PanelController: NSObject {
     private var countdownLabel: NSTextField!
     private var rebootButton: MiniActionButton!
     private var delayButton: MiniActionButton!
+    private var progressIndicator: NSProgressIndicator?
     
     private var delayMenuController: DelayMenuController!
     
