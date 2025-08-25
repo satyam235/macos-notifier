@@ -49,6 +49,7 @@ final class ConfigManager {
                     let data = try Data(contentsOf: URL(fileURLWithPath: path))
                     if let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
                         self.store = obj
+                        normalizeKeysLocked()
                     }
                 } catch {
                     NSLog("ConfigManager: failed reading config: \(error)")
@@ -78,6 +79,23 @@ final class ConfigManager {
             block(&self.store)
             self.persistLocked()
         }
+    }
+
+    // Accept both legacy/camelCase keys and canonical snake_case keys.
+    // Must be called inside barrier (Locked) context.
+    private func normalizeKeysLocked() {
+        let mappings: [(legacy: String, canonical: String)] = [
+            ("customMessage", "custom_message"),
+            ("rebootConfig", "reboot_config"),
+            ("delayCounter", "delay_counter"),
+            ("scheduledTime", "scheduled_time"),
+            ("rebootNow", "reboot_now")
+        ]
+        var changed = false
+        for (legacy, canonical) in mappings {
+            if store[canonical] == nil, let v = store[legacy] { store[canonical] = v; changed = true }
+        }
+        if changed { persistLocked() }
     }
     
     // MARK: - Mutations
