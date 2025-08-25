@@ -69,15 +69,24 @@ class PanelController: NSObject {
         
         backgroundView = NSVisualEffectView(frame: panel.contentView!.bounds)
         backgroundView.autoresizingMask = [.width, .height]
-    backgroundView.material = .hudWindow
+    // Modern translucent material (light, adaptive)
+    if #available(macOS 11.0, *) {
+        backgroundView.material = .popover
+    } else {
+        backgroundView.material = .light
+    }
         backgroundView.state = .active
         backgroundView.wantsLayer = true
         backgroundView.layer?.cornerRadius = cornerRadius
         backgroundView.layer?.masksToBounds = true
     backgroundView.layer?.shadowColor = NSColor.black.cgColor
-    backgroundView.layer?.shadowOpacity = 0.18
-    backgroundView.layer?.shadowRadius = 16
-    backgroundView.layer?.shadowOffset = CGSize(width: 0, height: -1)
+    backgroundView.layer?.shadowOpacity = 0.12
+    backgroundView.layer?.shadowRadius = 12
+    backgroundView.layer?.shadowOffset = CGSize(width: 0, height: -2)
+    // Subtle hairline border inside for definition
+    let scale = NSScreen.main?.backingScaleFactor ?? 2
+    backgroundView.layer?.borderWidth = 1 / scale
+    backgroundView.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.25).cgColor
         panel.contentView?.addSubview(backgroundView)
         
     // Icon container for subtle background + border ring
@@ -368,15 +377,28 @@ private extension PanelController {
             panel.setFrame(target, display: true)
             return
         }
+        panel.contentView?.wantsLayer = true
         var start = target
-        start.origin.y += 10
+        start.origin.y += 6
         panel.setFrame(start, display: false)
         panel.alphaValue = 0
+        panel.contentView?.layer?.transform = CATransform3DMakeScale(0.98, 0.98, 1)
         NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.28
+            ctx.duration = 0.25
             ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
             panel.animator().alphaValue = 1
             panel.animator().setFrame(target, display: true)
+            DispatchQueue.main.async {
+                CATransaction.begin()
+                let scaleAnim = CABasicAnimation(keyPath: "transform")
+                scaleAnim.fromValue = CATransform3DMakeScale(0.98, 0.98, 1)
+                scaleAnim.toValue = CATransform3DIdentity
+                scaleAnim.duration = 0.25
+                scaleAnim.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                panel.contentView?.layer?.add(scaleAnim, forKey: "scale")
+                panel.contentView?.layer?.transform = CATransform3DIdentity
+                CATransaction.commit()
+            }
         }
     }
 }
