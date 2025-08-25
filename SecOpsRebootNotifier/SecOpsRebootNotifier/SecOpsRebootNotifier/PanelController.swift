@@ -80,10 +80,10 @@ class PanelController: NSObject {
                                color: .labelColor, lines: 1)
     titleLabel.stringValue = "Device Will Reboot Shortly"
         
-    // Body label now wraps across multiple lines (max 4) instead of truncating tail
+    // Body label wraps to at most 2 lines (<=100 chars) then countdown appears below.
     bodyLabel = makeLabel(font: .systemFont(ofSize: 12),
-                  color: .secondaryLabelColor, lines: 4, wrap: true)
-    bodyLabel.stringValue = config?.customMessage ?? "Reboot required to complete important updates."
+                  color: .secondaryLabelColor, lines: 2, wrap: true)
+    bodyLabel.stringValue = enforceMessageLimit(config?.customMessage ?? "Reboot required to complete important updates.")
         
         countdownLabel = makeLabel(font: .systemFont(ofSize: 11),
                                    color: .tertiaryLabelColor, lines: 1)
@@ -224,10 +224,11 @@ class PanelController: NSObject {
         case .other:
             break
         }
-        // Hide delay button when counter exhausted or forced
-        if cfg.delayCounter == 0 || cfg.rebootConfig == .forceAfterPatch { delayButton.isHidden = true; rebootButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 140).isActive = true }
-        // Hide countdown label when graceful & delays available (Python hides timer_label in that condition)
-        if cfg.rebootConfig == .graceful && cfg.delayCounter > 0 { countdownLabel.isHidden = true }
+    // Hide delay button when counter exhausted or forced
+    if cfg.delayCounter == 0 || cfg.rebootConfig == .forceAfterPatch { delayButton.isHidden = true; rebootButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 140).isActive = true }
+    // Always show countdown label per new requirement
+    countdownLabel.isHidden = false
+    bodyLabel.stringValue = enforceMessageLimit(bodyLabel.stringValue)
     }
 
     
@@ -273,6 +274,23 @@ class PanelController: NSObject {
     
     @objc private func respositionNotification() {
         layoutAndReposition()
+    }
+}
+
+// MARK: - Message limiting
+private let kMaxBodyChars = 100
+
+private extension PanelController {
+    func enforceMessageLimit(_ raw: String) -> String {
+        // Collapse whitespace and remove newlines
+        var s = raw.replacingOccurrences(of: "[\n\r\t]+", with: " ", options: .regularExpression)
+                  .replacingOccurrences(of: " +", with: " ", options: .regularExpression)
+                  .trimmingCharacters(in: .whitespacesAndNewlines)
+        if s.count > kMaxBodyChars {
+            let idx = s.index(s.startIndex, offsetBy: kMaxBodyChars)
+            s = String(s[..<idx]).trimmingCharacters(in: .whitespacesAndNewlines) + "…"
+        }
+        return s
     }
 }
 
