@@ -93,7 +93,11 @@ final class ConfigManager {
         ]
         var changed = false
         for (legacy, canonical) in mappings {
-            if store[canonical] == nil, let v = store[legacy] { store[canonical] = v; changed = true }
+            if let v = store[legacy] {
+                if store[canonical] == nil { store[canonical] = v }
+                store.removeValue(forKey: legacy) // always remove legacy key
+                changed = true
+            }
         }
         if changed { persistLocked() }
     }
