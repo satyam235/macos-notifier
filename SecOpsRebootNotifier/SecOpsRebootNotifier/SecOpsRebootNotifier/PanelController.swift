@@ -80,8 +80,9 @@ class PanelController: NSObject {
                                color: .labelColor, lines: 1)
     titleLabel.stringValue = "Device Will Reboot Shortly"
         
-        bodyLabel = makeLabel(font: .systemFont(ofSize: 12),
-                              color: .secondaryLabelColor, lines: 2)
+    // Body label now wraps across multiple lines (max 4) instead of truncating tail
+    bodyLabel = makeLabel(font: .systemFont(ofSize: 12),
+                  color: .secondaryLabelColor, lines: 4, wrap: true)
     bodyLabel.stringValue = config?.customMessage ?? "Reboot required to complete important updates."
         
         countdownLabel = makeLabel(font: .systemFont(ofSize: 11),
@@ -137,12 +138,18 @@ class PanelController: NSObject {
         panel.setFrame(frame, display: false)
     }
     
-    private func makeLabel(font: NSFont, color: NSColor, lines: Int) -> NSTextField {
+    private func makeLabel(font: NSFont, color: NSColor, lines: Int, wrap: Bool = false) -> NSTextField {
         let l = NSTextField(labelWithString: "")
         l.font = font
         l.textColor = color
-        l.lineBreakMode = .byTruncatingTail
-        l.maximumNumberOfLines = lines
+        if wrap {
+            l.lineBreakMode = .byWordWrapping
+            // 0 means unlimited, but we enforce visual limit by max lines param
+            l.maximumNumberOfLines = lines
+        } else {
+            l.lineBreakMode = .byTruncatingTail
+            l.maximumNumberOfLines = lines
+        }
         return l
     }
     
