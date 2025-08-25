@@ -34,7 +34,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        return true
+        // Keep app alive so accidental clicks outside panel don't auto-exit.
+        return false
     }
 }
 

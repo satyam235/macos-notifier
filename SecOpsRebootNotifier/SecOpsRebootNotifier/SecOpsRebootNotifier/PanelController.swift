@@ -12,7 +12,7 @@ class PanelController: NSObject {
     private let cornerRadius: CGFloat = 16
     private var initialTotalSeconds: Int
     
-    private var panel: NSPanel!
+    private var panel: PersistentPanel!
     private var backgroundView: NSVisualEffectView!
     
     private var iconContainer: NSView! // kept for layout grouping, now transparent
@@ -51,7 +51,7 @@ class PanelController: NSObject {
     }
     
     private func buildUI() {
-        panel = NSPanel(
+    panel = PersistentPanel(
             contentRect: NSRect(x: 0, y: 0, width: panelWidth, height: 140),
             styleMask: [.nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
@@ -337,6 +337,19 @@ class PanelController: NSObject {
     
     @objc private func respositionNotification() {
         layoutAndReposition()
+    }
+}
+
+// MARK: - PersistentPanel prevents auto-dismiss on outside click
+private final class PersistentPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+    override func resignKey() {
+        // Don't close when focus moves elsewhere
+        super.resignKey()
+    }
+    override func performClose(_ sender: Any?) {
+        // Ignore programmatic close requests unless explicitly terminated
     }
 }
 
