@@ -23,6 +23,7 @@ class PanelController: NSObject {
     // Plain button that shows a menu (no arrow) for options
     private var optionsButton: NSButton!
     private var optionsMenu: NSMenu!
+    private var optionsButtonWidthConstraint: NSLayoutConstraint?
     // progress indicator removed
     
     private var delayMenuController: DelayMenuController!
@@ -117,7 +118,7 @@ class PanelController: NSObject {
     bodyLabel.stringValue = enforceMessageLimit(config?.customMessage ?? "Reboot required to complete important updates.")
         
     countdownLabel = makeLabel(font: .monospacedDigitSystemFont(ofSize: 11, weight: .semibold),
-                   color: NSColor.controlAccentColor.withAlphaComponent(0.85), lines: 1)
+                   color: .labelColor, lines: 1)
         countdownLabel.stringValue = formattedCountdown()
     applyParagraphStyle(to: bodyLabel)
     applyParagraphStyle(to: countdownLabel, tighten: true)
@@ -130,6 +131,7 @@ class PanelController: NSObject {
     optionsButton.setAccessibilityLabel("Options: reboot or delay choices")
     buildOptionsMenu()
     countdownLabel.setAccessibilityLabel("Countdown until automatic reboot")
+    updateOptionsButtonWidth()
         
         let textStack = NSStackView()
         textStack.orientation = .vertical
@@ -223,12 +225,7 @@ class PanelController: NSObject {
             // Decrement remaining time each second
             self.state.tick()
             let remaining = self.state.remainingSeconds
-            if remaining <= 60 {
-                self.countdownLabel.textColor = .systemRed
-            } else if self.countdownLabel.textColor == .systemRed {
-                // restore accent styling when crossing back above a minute (unlikely but defensive)
-                self.countdownLabel.textColor = NSColor.controlAccentColor.withAlphaComponent(0.85)
-            }
+            // Color stays constant; no highlight for last minute.
             self.updateCountdownLabel()
             if remaining <= 0 {
                 self.timer?.cancel()
@@ -382,23 +379,11 @@ private extension PanelController {
     }
 
     func updateCountdownLabel() {
-        let base = formattedCountdown() // e.g., "Auto reboot in 04:55 minutes."
-        let remaining = state.remainingSeconds
-        let timeRegex = try? NSRegularExpression(pattern: "\\d{1,2}:\\d{2}")
-        let attr = NSMutableAttributedString(string: base, attributes: [
+        let base = formattedCountdown()
+        countdownLabel.attributedStringValue = NSAttributedString(string: base, attributes: [
             .font: countdownLabel.font as Any,
-            .foregroundColor: countdownLabel.textColor as Any
+            .foregroundColor: NSColor.labelColor
         ])
-        if remaining > 60, let re = timeRegex { // only accent-highlight when not in critical (<60s)
-            let range = NSRange(location: 0, length: (base as NSString).length)
-            if let match = re.firstMatch(in: base, range: range) {
-                attr.addAttributes([
-                    .foregroundColor: NSColor.controlAccentColor,
-                    .font: NSFont.monospacedDigitSystemFont(ofSize: countdownLabel.font?.pointSize ?? 11, weight: .bold)
-                ], range: match.range)
-            }
-        }
-        countdownLabel.attributedStringValue = attr
     }
 
     // Build dynamic options dropdown: first dummy title, then actions.
@@ -424,13 +409,13 @@ private extension PanelController {
     func formattedDelay(_ seconds: Int) -> String {
         if seconds >= 3600 && seconds % 3600 == 0 {
             let hrs = seconds / 3600
-            return hrs == 1 ? "Delay 1 hr" : "Delay \(hrs) hrs"
+            return hrs == 1 ? "Remind in 1 hr" : "Remind in \(hrs) hrs"
         }
         if seconds % 60 == 0 {
             let mins = seconds / 60
-            return mins == 1 ? "Delay 1 min" : "Delay \(mins) min"
+            return mins == 1 ? "Remind in 1 min" : "Remind in \(mins) min"
         }
-        return "Delay \(seconds)s"
+        return "Remind in \(seconds)s"
     }
 
     func disableAllDelayItems(reason: String? = nil) {
@@ -439,6 +424,23 @@ private extension PanelController {
                 item.isEnabled = false
                 if let reason { item.title = reason }
             }
+        }
+    }
+
+    func updateOptionsButtonWidth() {
+        guard let menu = optionsMenu else { return }
+        let padding: CGFloat = 24
+        let font = optionsButton.font ?? .systemFont(ofSize: 11, weight: .semibold)
+        var maxWidth = (optionsButton.title as NSString).size(withAttributes: [.font: font]).width
+        for item in menu.items where !item.isSeparatorItem {
+            let w = (item.title as NSString).size(withAttributes: [.font: font]).width
+            if w > maxWidth { maxWidth = w }
+        }
+        let target = max(90, ceil(maxWidth + padding))
+        if let c = optionsButtonWidthConstraint { c.constant = target } else {
+            let cNew = optionsButton.widthAnchor.constraint(greaterThanOrEqualToConstant: target)
+            cNew.isActive = true
+            optionsButtonWidthConstraint = cNew
         }
     }
 }
