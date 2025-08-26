@@ -20,8 +20,8 @@ class PanelController: NSObject {
     private var titleLabel: NSTextField!
     private var bodyLabel: NSTextField!
     private var countdownLabel: NSTextField!
-    private var rebootButton: MiniActionButton!
-    private var delayButton: MiniActionButton!
+    // Replaced separate action buttons with a single pull‑down options control
+    private var optionsButton: NSPopUpButton!
     // progress indicator removed
     
     private var delayMenuController: DelayMenuController!
@@ -121,23 +121,16 @@ class PanelController: NSObject {
     applyParagraphStyle(to: bodyLabel)
     applyParagraphStyle(to: countdownLabel, tighten: true)
         
-        rebootButton = MiniActionButton(title: "Reboot Now", style: .primary) { [weak self] in
-            self?.rebootNow()
-        }
-        delayButton = MiniActionButton(title: "Delay Reboot", style: .secondary) { [weak self] in
-            self?.showDelayMenu()
-        }
-    rebootButton.setAccessibilityLabel("Reboot Now")
-    delayButton.setAccessibilityLabel("Delay Reboot")
+    // Popup style like macOS notification "Options" button (now dynamic items)
+    optionsButton = NSPopUpButton(frame: .zero, pullsDown: true)
+    optionsButton.translatesAutoresizingMaskIntoConstraints = false
+    optionsButton.font = .systemFont(ofSize: 11, weight: .semibold)
+    optionsButton.bezelStyle = .rounded
+    optionsButton.isBordered = true
+    optionsButton.pullsDown = true
+    buildOptionsMenu()
+    optionsButton.setAccessibilityLabel("Options menu: reboot or delay choices")
     countdownLabel.setAccessibilityLabel("Countdown until automatic reboot")
-    rebootButton.keyEquivalent = "\r"
-    delayButton.keyEquivalent = "d"
-        
-    let buttonStack = NSStackView(views: [rebootButton, delayButton])
-        buttonStack.orientation = .horizontal
-        buttonStack.alignment = .centerY
-    buttonStack.spacing = 12
-        buttonStack.translatesAutoresizingMaskIntoConstraints = false
         
         let textStack = NSStackView()
         textStack.orientation = .vertical
@@ -150,7 +143,7 @@ class PanelController: NSObject {
         
     backgroundView.addSubview(iconContainer)
     backgroundView.addSubview(textStack)
-    backgroundView.addSubview(buttonStack)
+    backgroundView.addSubview(optionsButton)
 
     // (Progress bar removed per design change)
 
@@ -172,19 +165,20 @@ class PanelController: NSObject {
 
             textStack.leadingAnchor.constraint(equalTo: iconContainer.trailingAnchor, constant: 12),
             textStack.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 10),
-            textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
-            buttonStack.topAnchor.constraint(equalTo: countdownLabel.bottomAnchor, constant: 8),
-            buttonStack.centerXAnchor.constraint(equalTo: backgroundView.centerXAnchor),
-            buttonStack.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -10),
+            textStack.trailingAnchor.constraint(lessThanOrEqualTo: optionsButton.leadingAnchor, constant: -12),
+            optionsButton.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 6),
+            optionsButton.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -10),
+            optionsButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 90),
+            countdownLabel.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -8),
 
             // progress constraints removed
         ])
         
         panel.contentView?.layoutSubtreeIfNeeded()
     panel.contentView?.layoutSubtreeIfNeeded()
-    let requiredHeight = buttonStack.frame.maxY + 12
+    let requiredHeight = countdownLabel.frame.maxY + 10
         var frame = panel.frame
-        frame.size.height = max(requiredHeight, 118)
+        frame.size.height = max(requiredHeight, 90)
         panel.setFrame(frame, display: false)
     }
     
@@ -204,16 +198,10 @@ class PanelController: NSObject {
     }
     
     private func configureMenu() {
+        // DelayMenuController retained for potential future expansion; not used with new compact "Options" popup.
         delayMenuController = DelayMenuController(options: state.allowedDelayOptions) { [weak self] seconds in
             self?.applyDelay(seconds)
         }
-    }
-    
-    private func showDelayMenu() {
-        guard let superview = delayButton.superview else { return }
-        let menu = delayMenuController.menu
-        let point = NSPoint(x: delayButton.frame.minX, y: delayButton.frame.minY - 4)
-        menu.popUp(positioning: nil, at: point, in: superview)
     }
     
     private func startTimer() {
@@ -269,9 +257,7 @@ class PanelController: NSObject {
         updateCountdownLabel()
         config?.applyDelay(seconds: seconds)
         // After applying delay, also decrement local visual state of remaining delay_counter if present.
-        if let cfg = config {
-            if cfg.delayCounter <= 0 { delayButton.isHidden = true }
-        }
+    if let cfg = config, cfg.delayCounter <= 0 { disableAllDelayItems(reason: "No Delay Left") }
     }
     
     // No longer used: expiration now maps to rebootNow
@@ -279,24 +265,17 @@ class PanelController: NSObject {
 
     private func applyConfigVisuals() {
         guard let cfg = config else { return }
-        // Title tweak based on reboot_config and delay counter similar to Python logic
         switch cfg.rebootConfig {
         case .graceful:
             if cfg.delayCounter != 0 { titleLabel.stringValue = "Reboot Required" }
         case .forceAfterPatch:
             titleLabel.stringValue = "Device Will Reboot Shortly"
-        case .other:
-            break
+        case .other: break
         }
-    // Hide delay button when counter exhausted or forced
-    if cfg.delayCounter == 0 || cfg.rebootConfig == .forceAfterPatch { delayButton.isHidden = true; rebootButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 140).isActive = true }
-    // Equalize button widths for consistent visual balance
-    rebootButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 118).isActive = true
-    delayButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 118).isActive = true
-    rebootButton.widthAnchor.constraint(equalTo: delayButton.widthAnchor).isActive = true
-    // Always show countdown label per new requirement
-    countdownLabel.isHidden = false
-    bodyLabel.stringValue = enforceMessageLimit(bodyLabel.stringValue)
+        // Disable delay menu entry if forced or no counter
+    if cfg.delayCounter == 0 || cfg.rebootConfig == .forceAfterPatch { disableAllDelayItems() }
+        countdownLabel.isHidden = false
+        bodyLabel.stringValue = enforceMessageLimit(bodyLabel.stringValue)
     }
 
     
@@ -351,6 +330,14 @@ class PanelController: NSObject {
     }
 }
 
+// MARK: - Menu item actions
+private extension PanelController {
+    @objc func rebootNowMenu(_ sender: Any?) { rebootNow() }
+    @objc func delayMenuItemSelected(_ sender: NSMenuItem) {
+        if let seconds = sender.representedObject as? Int { applyDelay(seconds) }
+    }
+}
+
 // MARK: - PersistentPanel prevents auto-dismiss on outside click
 private final class PersistentPanel: NSPanel {
     override var canBecomeKey: Bool { true }
@@ -398,6 +385,49 @@ private extension PanelController {
             }
         }
         countdownLabel.attributedStringValue = attr
+    }
+
+    // Build dynamic options dropdown: first dummy title, then actions.
+    func buildOptionsMenu() {
+        guard let menu = optionsButton.menu else { return }
+        menu.removeAllItems()
+        menu.addItem(withTitle: "Options", action: nil, keyEquivalent: "") // dummy display
+        // Reboot now item
+        let rebootItem = NSMenuItem(title: "Reboot Now", action: #selector(rebootNowMenu), keyEquivalent: "")
+        rebootItem.target = self
+        rebootItem.identifier = NSUserInterfaceItemIdentifier("rebootNow")
+        menu.addItem(rebootItem)
+        // Delay items from allowedDelayOptions
+        if !state.allowedDelayOptions.isEmpty { menu.addItem(NSMenuItem.separator()) }
+        for seconds in state.allowedDelayOptions {
+            let title = formattedDelay(seconds)
+            let item = NSMenuItem(title: title, action: #selector(delayMenuItemSelected(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = seconds
+            item.identifier = NSUserInterfaceItemIdentifier("delay-\(seconds)")
+            menu.addItem(item)
+        }
+    }
+
+    func formattedDelay(_ seconds: Int) -> String {
+        if seconds >= 3600 && seconds % 3600 == 0 {
+            let hrs = seconds / 3600
+            return hrs == 1 ? "Delay 1 hr" : "Delay \(hrs) hrs"
+        }
+        if seconds % 60 == 0 {
+            let mins = seconds / 60
+            return mins == 1 ? "Delay 1 min" : "Delay \(mins) min"
+        }
+        return "Delay \(seconds)s"
+    }
+
+    func disableAllDelayItems(reason: String? = nil) {
+        optionsButton.menu?.items.forEach { item in
+            if item.identifier?.rawValue.hasPrefix("delay-") == true {
+                item.isEnabled = false
+                if let reason { item.title = reason }
+            }
+        }
     }
 }
 
