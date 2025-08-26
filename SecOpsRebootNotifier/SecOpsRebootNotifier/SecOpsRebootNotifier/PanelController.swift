@@ -117,8 +117,8 @@ class PanelController: NSObject {
                   color: .secondaryLabelColor, lines: 2, wrap: true)
     bodyLabel.stringValue = enforceMessageLimit(config?.customMessage ?? "Reboot required to complete important updates.")
         
-    countdownLabel = makeLabel(font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular),
-                   color: .secondaryLabelColor, lines: 1)
+    countdownLabel = makeLabel(font: .monospacedDigitSystemFont(ofSize: 11, weight: .semibold),
+                   color: .labelColor, lines: 1)
         countdownLabel.stringValue = formattedCountdown()
     applyParagraphStyle(to: bodyLabel)
     applyParagraphStyle(to: countdownLabel, tighten: true)
