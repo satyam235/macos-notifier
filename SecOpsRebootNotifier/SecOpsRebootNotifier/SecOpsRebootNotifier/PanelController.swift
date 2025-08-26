@@ -165,20 +165,23 @@ class PanelController: NSObject {
 
             textStack.leadingAnchor.constraint(equalTo: iconContainer.trailingAnchor, constant: 12),
             textStack.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 10),
-            textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
+            // leave space on the last line for the button
+            textStack.trailingAnchor.constraint(lessThanOrEqualTo: optionsButton.leadingAnchor, constant: -12),
+            textStack.trailingAnchor.constraint(lessThanOrEqualTo: backgroundView.trailingAnchor, constant: -20),
 
+            // Countdown bottom anchor defines panel bottom padding
+            countdownLabel.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -8),
+            // Align options button with countdown baseline
+            optionsButton.firstBaselineAnchor.constraint(equalTo: countdownLabel.firstBaselineAnchor),
             optionsButton.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -12),
-            optionsButton.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -8),
-            optionsButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 90),
-
-            countdownLabel.bottomAnchor.constraint(lessThanOrEqualTo: optionsButton.topAnchor, constant: -4),
-            countdownLabel.bottomAnchor.constraint(greaterThanOrEqualTo: backgroundView.bottomAnchor, constant: -38) // ensure stack doesn't overrun
+            optionsButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 90)
             // progress constraints removed
         ])
         
         panel.contentView?.layoutSubtreeIfNeeded()
     panel.contentView?.layoutSubtreeIfNeeded()
-    let requiredHeight = max(countdownLabel.frame.maxY, optionsButton.frame.maxY) + 10
+    backgroundView.layoutSubtreeIfNeeded()
+    let requiredHeight = countdownLabel.frame.maxY + 10
         var frame = panel.frame
         frame.size.height = max(requiredHeight, 90)
         panel.setFrame(frame, display: false)
