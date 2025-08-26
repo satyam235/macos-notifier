@@ -20,8 +20,9 @@ class PanelController: NSObject {
     private var titleLabel: NSTextField!
     private var bodyLabel: NSTextField!
     private var countdownLabel: NSTextField!
-    // Replaced separate action buttons with a single pull‑down options control
-    private var optionsButton: NSPopUpButton!
+    // Plain button that shows a menu (no arrow) for options
+    private var optionsButton: NSButton!
+    private var optionsMenu: NSMenu!
     // progress indicator removed
     
     private var delayMenuController: DelayMenuController!
@@ -121,15 +122,13 @@ class PanelController: NSObject {
     applyParagraphStyle(to: bodyLabel)
     applyParagraphStyle(to: countdownLabel, tighten: true)
         
-    // Popup style like macOS notification "Options" button (now dynamic items)
-    optionsButton = NSPopUpButton(frame: .zero, pullsDown: true)
+    // Plain button (no disclosure arrow). We'll pop up an NSMenu manually.
+    optionsButton = NSButton(title: "Options", target: self, action: #selector(showOptionsMenu(_:)))
     optionsButton.translatesAutoresizingMaskIntoConstraints = false
     optionsButton.font = .systemFont(ofSize: 11, weight: .semibold)
     optionsButton.bezelStyle = .rounded
-    optionsButton.isBordered = true
-    optionsButton.pullsDown = true
+    optionsButton.setAccessibilityLabel("Options: reboot or delay choices")
     buildOptionsMenu()
-    optionsButton.setAccessibilityLabel("Options menu: reboot or delay choices")
     countdownLabel.setAccessibilityLabel("Countdown until automatic reboot")
         
         let textStack = NSStackView()
@@ -139,11 +138,21 @@ class PanelController: NSObject {
         textStack.translatesAutoresizingMaskIntoConstraints = false
         textStack.addArrangedSubview(titleLabel)
         textStack.addArrangedSubview(bodyLabel)
-        textStack.addArrangedSubview(countdownLabel)
+    // countdown placed in separate bottom row with options button for full-width title/body
         
     backgroundView.addSubview(iconContainer)
     backgroundView.addSubview(textStack)
-    backgroundView.addSubview(optionsButton)
+    // Bottom row container
+    let bottomRow = NSStackView()
+    bottomRow.orientation = .horizontal
+    bottomRow.alignment = .firstBaseline
+    bottomRow.spacing = 12
+    bottomRow.translatesAutoresizingMaskIntoConstraints = false
+    bottomRow.addArrangedSubview(countdownLabel)
+    bottomRow.addArrangedSubview(NSView()) // flexible spacer
+    bottomRow.addArrangedSubview(optionsButton)
+
+    backgroundView.addSubview(bottomRow)
 
     // (Progress bar removed per design change)
 
@@ -165,17 +174,14 @@ class PanelController: NSObject {
 
             textStack.leadingAnchor.constraint(equalTo: iconContainer.trailingAnchor, constant: 12),
             textStack.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 10),
-            // leave space on the last line for the button
-            textStack.trailingAnchor.constraint(lessThanOrEqualTo: optionsButton.leadingAnchor, constant: -12),
-            textStack.trailingAnchor.constraint(lessThanOrEqualTo: backgroundView.trailingAnchor, constant: -20),
+            textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
 
-            // Countdown bottom anchor defines panel bottom padding
-            countdownLabel.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -8),
-            // Align options button with countdown baseline
-            optionsButton.firstBaselineAnchor.constraint(equalTo: countdownLabel.firstBaselineAnchor),
-            optionsButton.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -12),
+            bottomRow.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
+            bottomRow.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: 4),
+            bottomRow.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
+            bottomRow.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -8),
+
             optionsButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 90)
-            // progress constraints removed
         ])
         
         panel.contentView?.layoutSubtreeIfNeeded()
@@ -341,6 +347,9 @@ private extension PanelController {
     @objc func delayMenuItemSelected(_ sender: NSMenuItem) {
         if let seconds = sender.representedObject as? Int { applyDelay(seconds) }
     }
+    @objc func showOptionsMenu(_ sender: NSButton) {
+        optionsMenu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height - 2), in: sender)
+    }
 }
 
 // MARK: - PersistentPanel prevents auto-dismiss on outside click
@@ -394,15 +403,13 @@ private extension PanelController {
 
     // Build dynamic options dropdown: first dummy title, then actions.
     func buildOptionsMenu() {
-        guard let menu = optionsButton.menu else { return }
-        menu.removeAllItems()
-        menu.addItem(withTitle: "Options", action: nil, keyEquivalent: "") // dummy display
+        let menu = NSMenu()
+        optionsMenu = menu
         // Reboot now item
         let rebootItem = NSMenuItem(title: "Reboot Now", action: #selector(rebootNowMenu), keyEquivalent: "")
         rebootItem.target = self
         rebootItem.identifier = NSUserInterfaceItemIdentifier("rebootNow")
         menu.addItem(rebootItem)
-        // Delay items from allowedDelayOptions
         if !state.allowedDelayOptions.isEmpty { menu.addItem(NSMenuItem.separator()) }
         for seconds in state.allowedDelayOptions {
             let title = formattedDelay(seconds)
@@ -427,7 +434,7 @@ private extension PanelController {
     }
 
     func disableAllDelayItems(reason: String? = nil) {
-        optionsButton.menu?.items.forEach { item in
+    optionsMenu.items.forEach { item in
             if item.identifier?.rawValue.hasPrefix("delay-") == true {
                 item.isEnabled = false
                 if let reason { item.title = reason }
