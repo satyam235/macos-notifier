@@ -117,8 +117,8 @@ class PanelController: NSObject {
                   color: .secondaryLabelColor, lines: 2, wrap: true)
     bodyLabel.stringValue = enforceMessageLimit(config?.customMessage ?? "Reboot required to complete important updates.")
         
-    countdownLabel = makeLabel(font: .monospacedDigitSystemFont(ofSize: 11, weight: .semibold),
-                   color: .labelColor, lines: 1)
+    countdownLabel = makeLabel(font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular),
+                   color: .secondaryLabelColor, lines: 1)
         countdownLabel.stringValue = formattedCountdown()
     applyParagraphStyle(to: bodyLabel)
     applyParagraphStyle(to: countdownLabel, tighten: true)
@@ -159,13 +159,13 @@ class PanelController: NSObject {
     // (Progress bar removed per design change)
 
     // Constrain text width so content wraps instead of forcing panel wider than intended.
-    let maxTextWidth = panelWidth - 20 /*left padding*/ - 40 /*icon width*/ - 12 /*gap*/ - 20 /*right padding*/
+    let maxTextWidth = panelWidth - 16 /*left padding*/ - 40 /*icon width*/ - 12 /*gap*/ - 20 /*right padding*/
     textStack.widthAnchor.constraint(lessThanOrEqualToConstant: maxTextWidth).isActive = true
     bodyLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         
         NSLayoutConstraint.activate([
-            iconContainer.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20),
-            iconContainer.topAnchor.constraint(greaterThanOrEqualTo: backgroundView.topAnchor, constant: 10),
+            iconContainer.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 16),
+            iconContainer.centerYAnchor.constraint(equalTo: backgroundView.centerYAnchor, constant: -2),
             iconContainer.widthAnchor.constraint(equalToConstant: 40),
             iconContainer.heightAnchor.constraint(equalToConstant: 40),
 
@@ -450,7 +450,7 @@ private extension PanelController {
     func applyParagraphStyle(to label: NSTextField, tighten: Bool = false) {
         let ps = NSMutableParagraphStyle()
         ps.lineBreakMode = label.lineBreakMode
-        ps.lineHeightMultiple = tighten ? 1.05 : 1.15
+        ps.lineHeightMultiple = tighten ? 1.05 : 1.18
         let attr = NSAttributedString(string: label.stringValue, attributes: [
             .font: label.font as Any,
             .foregroundColor: label.textColor as Any,
