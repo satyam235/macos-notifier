@@ -129,8 +129,8 @@ class PanelController: NSObject {
     optionsButton.font = .systemFont(ofSize: 11, weight: .semibold)
     optionsButton.bezelStyle = .rounded
     optionsButton.setAccessibilityLabel("Options: reboot or delay choices")
-    // Slightly taller button for better vertical balance with enlarged countdown line
-    optionsButton.heightAnchor.constraint(equalToConstant: 26).isActive = true
+    // Taller button for better balance with countdown line
+    optionsButton.heightAnchor.constraint(equalToConstant: 28).isActive = true
     buildOptionsMenu()
     countdownLabel.setAccessibilityLabel("Countdown until automatic reboot")
     updateOptionsButtonWidth()
@@ -181,9 +181,9 @@ class PanelController: NSObject {
             textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
 
             bottomRow.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
-            bottomRow.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: 8),
+            bottomRow.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: 6),
             bottomRow.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
-            bottomRow.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -10),
+            bottomRow.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -6),
 
             optionsButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 90)
         ])
