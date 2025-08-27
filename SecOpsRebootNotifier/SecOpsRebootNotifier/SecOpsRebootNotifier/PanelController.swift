@@ -149,7 +149,7 @@ class PanelController: NSObject {
     // Bottom row container
     let bottomRow = NSStackView()
     bottomRow.orientation = .horizontal
-    bottomRow.alignment = .firstBaseline
+    bottomRow.alignment = .center
     bottomRow.spacing = 12
     bottomRow.translatesAutoresizingMaskIntoConstraints = false
     bottomRow.addArrangedSubview(countdownLabel)
