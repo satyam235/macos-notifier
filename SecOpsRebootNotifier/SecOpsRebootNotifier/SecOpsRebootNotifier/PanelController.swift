@@ -117,7 +117,7 @@ class PanelController: NSObject {
                   color: .secondaryLabelColor, lines: 2, wrap: true)
     bodyLabel.stringValue = enforceMessageLimit(config?.customMessage ?? "Reboot required to complete important updates.")
         
-    countdownLabel = makeLabel(font: .monospacedDigitSystemFont(ofSize: 11, weight: .semibold),
+    countdownLabel = makeLabel(font: .monospacedDigitSystemFont(ofSize: 12, weight: .semibold),
                    color: .labelColor, lines: 1)
         countdownLabel.stringValue = formattedCountdown()
     applyParagraphStyle(to: bodyLabel)
@@ -129,6 +129,8 @@ class PanelController: NSObject {
     optionsButton.font = .systemFont(ofSize: 11, weight: .semibold)
     optionsButton.bezelStyle = .rounded
     optionsButton.setAccessibilityLabel("Options: reboot or delay choices")
+    // Slightly taller button for better vertical balance with enlarged countdown line
+    optionsButton.heightAnchor.constraint(equalToConstant: 26).isActive = true
     buildOptionsMenu()
     countdownLabel.setAccessibilityLabel("Countdown until automatic reboot")
     updateOptionsButtonWidth()
@@ -179,9 +181,9 @@ class PanelController: NSObject {
             textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
 
             bottomRow.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
-            bottomRow.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: 4),
+            bottomRow.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: 8),
             bottomRow.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
-            bottomRow.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -8),
+            bottomRow.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -10),
 
             optionsButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 90)
         ])
