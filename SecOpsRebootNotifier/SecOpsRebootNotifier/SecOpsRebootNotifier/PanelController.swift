@@ -268,6 +268,8 @@ class PanelController: NSObject {
         config?.applyDelay(seconds: seconds)
         // After applying delay, also decrement local visual state of remaining delay_counter if present.
     if let cfg = config, cfg.delayCounter <= 0 { disableAllDelayItems(reason: "No Delay Left") }
+    // Match original UX: close notifier after user chooses a delay.
+    quitApp()
     }
     
     // No longer used: expiration now maps to rebootNow
@@ -392,20 +394,35 @@ private extension PanelController {
     func buildOptionsMenu() {
         let menu = NSMenu()
         optionsMenu = menu
-        // Reboot now item
+        // Always add Reboot Now
         let rebootItem = NSMenuItem(title: "Reboot Now", action: #selector(rebootNowMenu), keyEquivalent: "")
         rebootItem.target = self
         rebootItem.identifier = NSUserInterfaceItemIdentifier("rebootNow")
         menu.addItem(rebootItem)
-        if !state.allowedDelayOptions.isEmpty { menu.addItem(NSMenuItem.separator()) }
-        for seconds in state.allowedDelayOptions {
-            let title = formattedDelay(seconds)
-            let item = NSMenuItem(title: title, action: #selector(delayMenuItemSelected(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = seconds
-            item.identifier = NSUserInterfaceItemIdentifier("delay-\(seconds)")
-            menu.addItem(item)
+
+        // Determine if delay options should be shown
+        let canDelay: Bool = {
+            if state.allowedDelayOptions.isEmpty { return false }
+            // If no config, assume delays are permitted
+            guard let cfg = config else { return true }
+            if cfg.rebootConfig == .forceAfterPatch { return false }
+            return cfg.delayCounter > 0
+        }()
+
+        if canDelay {
+            menu.addItem(NSMenuItem.separator())
+            for seconds in state.allowedDelayOptions {
+                let title = formattedDelay(seconds)
+                let item = NSMenuItem(title: title, action: #selector(delayMenuItemSelected(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = seconds
+                item.identifier = NSUserInterfaceItemIdentifier("delay-\(seconds)")
+                menu.addItem(item)
+            }
         }
+
+        // Recalculate button width based on new menu contents
+        updateOptionsButtonWidth()
     }
 
     func formattedDelay(_ seconds: Int) -> String {
@@ -421,12 +438,8 @@ private extension PanelController {
     }
 
     func disableAllDelayItems(reason: String? = nil) {
-    optionsMenu.items.forEach { item in
-            if item.identifier?.rawValue.hasPrefix("delay-") == true {
-                item.isEnabled = false
-                if let reason { item.title = reason }
-            }
-        }
+        // Now we fully remove delay items & separator by rebuilding without them.
+        buildOptionsMenu()
     }
 
     func updateOptionsButtonWidth() {
