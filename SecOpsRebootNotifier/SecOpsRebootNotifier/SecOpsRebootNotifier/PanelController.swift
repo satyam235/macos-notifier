@@ -259,7 +259,9 @@ class PanelController: NSObject {
     
     private func rebootNow() {
         logger.log(action: .rebootNow, state: state)
-    config?.setRebootNow()
+        // Set reboot now flag and also clear scheduled time and scheduled status
+        config?.setRebootNow()
+        config?.clearScheduledStatus()
         quitApp()
     }
     

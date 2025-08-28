@@ -107,6 +107,13 @@ final class ConfigManager {
         mutate { $0["reboot_now"] = true }
     }
     
+    func clearScheduledStatus() {
+        mutate { dict in
+            dict["scheduled_time"] = ""
+            dict["task_scheduled"] = false
+        }
+    }
+    
     func applyDelay(seconds: Int) {
         mutate { dict in
             let current = dict["delay_counter"] as? Int ?? 0
@@ -116,6 +123,8 @@ final class ConfigManager {
             fmt.dateFormat = "yyyy-MM-dd HH:mm:ss"
             dict["scheduled_time"] = fmt.string(from: date)
             dict["task_scheduled"] = false
+            // Ensure reboot_now is false when delaying
+            dict["reboot_now"] = false
         }
     }
 }
