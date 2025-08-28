@@ -108,16 +108,16 @@ class PanelController: NSObject {
     iconView.image = NSImage(named: "SecOpsIcon")
     iconContainer.addSubview(iconView)
         
-    titleLabel = makeLabel(font: .systemFont(ofSize: 14, weight: .semibold),
+    titleLabel = makeLabel(font: .systemFont(ofSize: 13, weight: .semibold),
                                color: .labelColor, lines: 1)
     titleLabel.stringValue = "Device will reboot shortly"
         
     // Body label wraps to at most 2 lines (<=100 chars) then countdown appears below.
-    bodyLabel = makeLabel(font: .systemFont(ofSize: 12),
+    bodyLabel = makeLabel(font: .systemFont(ofSize: 11),
                   color: .secondaryLabelColor, lines: 2, wrap: true)
     bodyLabel.stringValue = enforceMessageLimit(config?.customMessage ?? "Reboot required to complete important updates.")
         
-    countdownLabel = makeLabel(font: .monospacedDigitSystemFont(ofSize: 12, weight: .regular),
+    countdownLabel = makeLabel(font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular),
                    color: .labelColor, lines: 1)
         countdownLabel.stringValue = formattedCountdown()
     applyParagraphStyle(to: bodyLabel)
@@ -130,7 +130,7 @@ class PanelController: NSObject {
     optionsButton.bezelStyle = .rounded
     optionsButton.setAccessibilityLabel("Options: reboot or delay choices")
     // Taller button for better balance with countdown line
-    optionsButton.heightAnchor.constraint(equalToConstant: 28).isActive = true
+    optionsButton.heightAnchor.constraint(equalToConstant: 24).isActive = true
     buildOptionsMenu()
     countdownLabel.setAccessibilityLabel("Countdown until automatic reboot")
     updateOptionsButtonWidth()
@@ -168,22 +168,22 @@ class PanelController: NSObject {
         NSLayoutConstraint.activate([
             iconContainer.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 12),
             iconContainer.centerYAnchor.constraint(equalTo: backgroundView.centerYAnchor, constant: -2),
-            iconContainer.widthAnchor.constraint(equalToConstant: 40),
-            iconContainer.heightAnchor.constraint(equalToConstant: 40),
+            iconContainer.widthAnchor.constraint(equalToConstant: 36),
+            iconContainer.heightAnchor.constraint(equalToConstant: 36),
 
             iconView.centerXAnchor.constraint(equalTo: iconContainer.centerXAnchor),
             iconView.centerYAnchor.constraint(equalTo: iconContainer.centerYAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 38),
-            iconView.heightAnchor.constraint(equalToConstant: 38),
+            iconView.widthAnchor.constraint(equalToConstant: 34),
+            iconView.heightAnchor.constraint(equalToConstant: 34),
 
             textStack.leadingAnchor.constraint(equalTo: iconContainer.trailingAnchor, constant: 12),
-            textStack.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 10),
+            textStack.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 8),
             textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
 
             bottomRow.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
-            bottomRow.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: 2),
+            bottomRow.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: 0),
             bottomRow.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
-            bottomRow.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -6),
+            bottomRow.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -4),
 
             optionsButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 90)
         ])
@@ -469,7 +469,7 @@ private extension PanelController {
     func applyParagraphStyle(to label: NSTextField, tighten: Bool = false) {
         let ps = NSMutableParagraphStyle()
         ps.lineBreakMode = label.lineBreakMode
-        ps.lineHeightMultiple = tighten ? 1.05 : 1.18
+        ps.lineHeightMultiple = tighten ? 1.0 : 1.1
         let attr = NSAttributedString(string: label.stringValue, attributes: [
             .font: label.font as Any,
             .foregroundColor: label.textColor as Any,
