@@ -181,7 +181,7 @@ class PanelController: NSObject {
             textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
 
             bottomRow.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
-            bottomRow.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: -2),
+            bottomRow.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: 2),
             bottomRow.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
             bottomRow.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -4),
 
