@@ -117,7 +117,7 @@ class PanelController: NSObject {
                   color: .secondaryLabelColor, lines: 2, wrap: true)
     bodyLabel.stringValue = enforceMessageLimit(config?.customMessage ?? "Reboot required to complete important updates.")
         
-    countdownLabel = makeLabel(font: .monospacedDigitSystemFont(ofSize: 12, weight: .regular),
+    countdownLabel = makeLabel(font: .systemFont(ofSize: 12, weight: .regular),
                    color: .labelColor, lines: 1)
         countdownLabel.stringValue = formattedCountdown()
     applyParagraphStyle(to: bodyLabel)
@@ -389,7 +389,7 @@ private extension PanelController {
     func updateCountdownLabel() {
         let base = formattedCountdown()
         countdownLabel.attributedStringValue = NSAttributedString(string: base, attributes: [
-            .font: countdownLabel.font as Any,
+            .font: NSFont.systemFont(ofSize: 12, weight: .regular),
             .foregroundColor: NSColor.labelColor
         ])
     }
