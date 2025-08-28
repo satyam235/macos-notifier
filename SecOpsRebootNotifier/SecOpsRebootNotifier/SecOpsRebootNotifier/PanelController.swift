@@ -138,7 +138,7 @@ class PanelController: NSObject {
         let textStack = NSStackView()
         textStack.orientation = .vertical
         textStack.alignment = .leading
-    textStack.spacing = 2
+    textStack.spacing = 1
         textStack.translatesAutoresizingMaskIntoConstraints = false
         textStack.addArrangedSubview(titleLabel)
         textStack.addArrangedSubview(bodyLabel)
@@ -181,7 +181,7 @@ class PanelController: NSObject {
             textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
 
             bottomRow.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
-            bottomRow.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: 6),
+            bottomRow.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: 2),
             bottomRow.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
             bottomRow.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -6),
 
