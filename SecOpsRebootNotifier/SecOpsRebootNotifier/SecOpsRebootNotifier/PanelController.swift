@@ -110,14 +110,14 @@ class PanelController: NSObject {
         
     titleLabel = makeLabel(font: .systemFont(ofSize: 14, weight: .semibold),
                                color: .labelColor, lines: 1)
-    titleLabel.stringValue = "Device Will Reboot Shortly"
+    titleLabel.stringValue = "Device will reboot shortly"
         
     // Body label wraps to at most 2 lines (<=100 chars) then countdown appears below.
     bodyLabel = makeLabel(font: .systemFont(ofSize: 12),
                   color: .secondaryLabelColor, lines: 2, wrap: true)
     bodyLabel.stringValue = enforceMessageLimit(config?.customMessage ?? "Reboot required to complete important updates.")
         
-    countdownLabel = makeLabel(font: .monospacedDigitSystemFont(ofSize: 12, weight: .semibold),
+    countdownLabel = makeLabel(font: .monospacedDigitSystemFont(ofSize: 12, weight: .regular),
                    color: .labelColor, lines: 1)
         countdownLabel.stringValue = formattedCountdown()
     applyParagraphStyle(to: bodyLabel)
@@ -166,7 +166,7 @@ class PanelController: NSObject {
     bodyLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         
         NSLayoutConstraint.activate([
-            iconContainer.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 16),
+            iconContainer.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 12),
             iconContainer.centerYAnchor.constraint(equalTo: backgroundView.centerYAnchor, constant: -2),
             iconContainer.widthAnchor.constraint(equalToConstant: 40),
             iconContainer.heightAnchor.constraint(equalToConstant: 40),
@@ -349,6 +349,10 @@ private extension PanelController {
         if let seconds = sender.representedObject as? Int { applyDelay(seconds) }
     }
     @objc func showOptionsMenu(_ sender: NSButton) {
+        // Restore original appearance when showing menu
+        if let buttonCell = sender.cell as? NSButtonCell {
+            buttonCell.highlighted = false
+        }
         optionsMenu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height - 2), in: sender)
     }
 }
@@ -563,9 +567,9 @@ private final class MiniActionButton: NSButton {
                 let base = NSColor.controlAccentColor
                 let bg: NSColor
                 if pressed {
-                    bg = base.blended(withFraction: 0.28, of: .black) ?? base
+                    bg = base.blended(withFraction: 0.15, of: .black) ?? base
                 } else if hover {
-                    bg = base.blended(withFraction: 0.18, of: .black) ?? base
+                    bg = base.blended(withFraction: 0.08, of: .black) ?? base
                 } else {
                     bg = base
                 }
