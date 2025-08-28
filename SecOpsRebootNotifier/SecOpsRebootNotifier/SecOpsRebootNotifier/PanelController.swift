@@ -351,7 +351,7 @@ private extension PanelController {
     @objc func showOptionsMenu(_ sender: NSButton) {
         // Restore original appearance when showing menu
         if let buttonCell = sender.cell as? NSButtonCell {
-            buttonCell.highlighted = false
+            buttonCell.isHighlighted = false
         }
         optionsMenu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height - 2), in: sender)
     }
