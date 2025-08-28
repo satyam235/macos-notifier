@@ -108,16 +108,16 @@ class PanelController: NSObject {
     iconView.image = NSImage(named: "SecOpsIcon")
     iconContainer.addSubview(iconView)
         
-    titleLabel = makeLabel(font: .systemFont(ofSize: 13, weight: .semibold),
+    titleLabel = makeLabel(font: .systemFont(ofSize: 13.5, weight: .semibold),
                                color: .labelColor, lines: 1)
     titleLabel.stringValue = "Device will reboot shortly"
         
     // Body label wraps to at most 2 lines (<=100 chars) then countdown appears below.
-    bodyLabel = makeLabel(font: .systemFont(ofSize: 11),
+    bodyLabel = makeLabel(font: .systemFont(ofSize: 12),
                   color: .secondaryLabelColor, lines: 2, wrap: true)
     bodyLabel.stringValue = enforceMessageLimit(config?.customMessage ?? "Reboot required to complete important updates.")
         
-    countdownLabel = makeLabel(font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular),
+    countdownLabel = makeLabel(font: .monospacedDigitSystemFont(ofSize: 12, weight: .regular),
                    color: .labelColor, lines: 1)
         countdownLabel.stringValue = formattedCountdown()
     applyParagraphStyle(to: bodyLabel)
@@ -138,7 +138,7 @@ class PanelController: NSObject {
         let textStack = NSStackView()
         textStack.orientation = .vertical
         textStack.alignment = .leading
-    textStack.spacing = 1
+    textStack.spacing = 2
         textStack.translatesAutoresizingMaskIntoConstraints = false
         textStack.addArrangedSubview(titleLabel)
         textStack.addArrangedSubview(bodyLabel)
@@ -469,7 +469,7 @@ private extension PanelController {
     func applyParagraphStyle(to label: NSTextField, tighten: Bool = false) {
         let ps = NSMutableParagraphStyle()
         ps.lineBreakMode = label.lineBreakMode
-        ps.lineHeightMultiple = tighten ? 1.0 : 1.1
+        ps.lineHeightMultiple = tighten ? 1.0 : 1.15
         let attr = NSAttributedString(string: label.stringValue, attributes: [
             .font: label.font as Any,
             .foregroundColor: label.textColor as Any,
