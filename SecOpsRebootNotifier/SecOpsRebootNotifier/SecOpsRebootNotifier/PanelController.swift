@@ -115,13 +115,19 @@ class PanelController: NSObject {
     // Body label wraps to at most 2 lines (<=100 chars) then countdown appears below.
     bodyLabel = makeLabel(font: .systemFont(ofSize: 12),
                   color: .secondaryLabelColor, lines: 2, wrap: true)
+    // Set smaller bottom padding for the label
+    bodyLabel.maximumNumberOfLines = 2
+    bodyLabel.usesSingleLineMode = false
+    bodyLabel.setContentCompressionResistancePriority(.defaultHigh, for: .vertical)
+    bodyLabel.setContentHuggingPriority(.defaultHigh, for: .vertical)
     bodyLabel.stringValue = enforceMessageLimit(config?.customMessage ?? "Reboot required to complete important updates.")
         
     countdownLabel = makeLabel(font: .systemFont(ofSize: 12, weight: .regular),
                    color: .labelColor, lines: 1)
         countdownLabel.stringValue = formattedCountdown()
-    applyParagraphStyle(to: bodyLabel)
-    applyParagraphStyle(to: countdownLabel, tighten: true)
+    // Skip paragraph styling to reduce extra spacing
+    // applyParagraphStyle(to: bodyLabel)
+    // applyParagraphStyle(to: countdownLabel, tighten: true)
         
     // Plain button (no disclosure arrow). We'll pop up an NSMenu manually.
     optionsButton = NSButton(title: "Options", target: self, action: #selector(showOptionsMenu(_:)))
@@ -181,7 +187,7 @@ class PanelController: NSObject {
             textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
 
             bottomRow.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
-            bottomRow.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: -4),
+            bottomRow.topAnchor.constraint(equalTo: bodyLabel.bottomAnchor, constant: -1),
             bottomRow.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
             bottomRow.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -4),
 
@@ -191,9 +197,9 @@ class PanelController: NSObject {
         panel.contentView?.layoutSubtreeIfNeeded()
     panel.contentView?.layoutSubtreeIfNeeded()
     backgroundView.layoutSubtreeIfNeeded()
-    let requiredHeight = countdownLabel.frame.maxY + 10
+    let requiredHeight = countdownLabel.frame.maxY + 6
         var frame = panel.frame
-        frame.size.height = max(requiredHeight, 90)
+        frame.size.height = max(requiredHeight, 86)
         panel.setFrame(frame, display: false)
     }
     
