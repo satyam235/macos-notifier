@@ -168,20 +168,20 @@ class PanelController: NSObject {
         NSLayoutConstraint.activate([
             iconContainer.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 12),
             iconContainer.centerYAnchor.constraint(equalTo: backgroundView.centerYAnchor, constant: -2),
-            iconContainer.widthAnchor.constraint(equalToConstant: 36),
-            iconContainer.heightAnchor.constraint(equalToConstant: 36),
+            iconContainer.widthAnchor.constraint(equalToConstant: 38),
+            iconContainer.heightAnchor.constraint(equalToConstant: 38),
 
             iconView.centerXAnchor.constraint(equalTo: iconContainer.centerXAnchor),
             iconView.centerYAnchor.constraint(equalTo: iconContainer.centerYAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 34),
-            iconView.heightAnchor.constraint(equalToConstant: 34),
+            iconView.widthAnchor.constraint(equalToConstant: 36),
+            iconView.heightAnchor.constraint(equalToConstant: 36),
 
             textStack.leadingAnchor.constraint(equalTo: iconContainer.trailingAnchor, constant: 12),
             textStack.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 8),
             textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
 
             bottomRow.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
-            bottomRow.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: 0),
+            bottomRow.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: -2),
             bottomRow.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
             bottomRow.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -4),
 
