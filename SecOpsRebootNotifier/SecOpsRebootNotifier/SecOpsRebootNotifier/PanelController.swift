@@ -138,7 +138,7 @@ class PanelController: NSObject {
         let textStack = NSStackView()
         textStack.orientation = .vertical
         textStack.alignment = .leading
-    textStack.spacing = 2
+    textStack.spacing = 1
         textStack.translatesAutoresizingMaskIntoConstraints = false
         textStack.addArrangedSubview(titleLabel)
         textStack.addArrangedSubview(bodyLabel)
@@ -181,7 +181,7 @@ class PanelController: NSObject {
             textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
 
             bottomRow.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
-            bottomRow.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: 0),
+            bottomRow.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: -4),
             bottomRow.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
             bottomRow.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -4),
 
@@ -469,7 +469,7 @@ private extension PanelController {
     func applyParagraphStyle(to label: NSTextField, tighten: Bool = false) {
         let ps = NSMutableParagraphStyle()
         ps.lineBreakMode = label.lineBreakMode
-        ps.lineHeightMultiple = tighten ? 1.0 : 1.15
+        ps.lineHeightMultiple = tighten ? 0.9 : 1.0
         let attr = NSAttributedString(string: label.stringValue, attributes: [
             .font: label.font as Any,
             .foregroundColor: label.textColor as Any,
