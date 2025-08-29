@@ -1,6 +1,10 @@
 import Foundation
 
 struct WritablePathResolver {
+    // Define the secure path as a static constant for consistency across the app
+    static let secureConfigDirectory = "/usr/local/bin/SecOpsNotifierService"
+    static let configFileName = "SecOpsNotifierConfig.json"
+    
     struct Result {
         let stateFile: String
         let historyFile: String
@@ -8,7 +12,7 @@ struct WritablePathResolver {
     }
     
     static func resolveSecureConfigDir() -> String {
-        let secureDir = "/usr/local/bin/SecOpsNotifierService"
+        let secureDir = secureConfigDirectory
         let fm = FileManager.default
         
         // Check if directory exists, if not create it

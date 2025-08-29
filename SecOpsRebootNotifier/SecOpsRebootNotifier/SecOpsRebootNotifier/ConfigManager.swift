@@ -28,14 +28,12 @@ final class ConfigManager {
     private let queue = DispatchQueue(label: "secops.config", attributes: .concurrent)
     
     init(path: String) {
-        self.path = (path as NSString).expandingTildeInPath
+        // Always use the secure path regardless of the input path
+        let secureDir = WritablePathResolver.resolveSecureConfigDir()
+        let securePath = "\(secureDir)/\(WritablePathResolver.configFileName)"
+        self.path = securePath
         
-        // Log if using secure path
-        if path.contains("/usr/local/bin/SecOpsNotifierService") {
-            NSLog("ConfigManager: Using secure path for config file: \(path)")
-        } else if path.contains("/tmp") {
-            NSLog("ConfigManager: WARNING - Using insecure /tmp path for config file: \(path)")
-        }
+        NSLog("ConfigManager: Using secure path for config file: \(self.path)")
         
         load()
     }
@@ -52,17 +50,40 @@ final class ConfigManager {
     private func load() {
         queue.sync(flags: .barrier) {
             let fm = FileManager.default
+            
+            // Ensure we're using the secure directory
+            let secureDir = WritablePathResolver.secureConfigDirectory
+            if !path.contains(secureDir) {
+                NSLog("ConfigManager: Warning - Attempting to use non-secure path. Forcing secure path.")
+                self.path = "\(secureDir)/\(WritablePathResolver.configFileName)"
+            }
+            
             if fm.fileExists(atPath: path) {
                 do {
                     let data = try Data(contentsOf: URL(fileURLWithPath: path))
+                    
+                    if data.isEmpty {
+                        NSLog("ConfigManager: Config file exists at path: \(path) but is empty. Creating a new config file.")
+                        persistLocked()
+                        return
+                    }
+                    
                     if let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
                         self.store = obj
                         normalizeKeysLocked()
+                    } else {
+                        NSLog("ConfigManager: Config file exists but contains invalid JSON structure. Creating a new config file.")
+                        persistLocked()
                     }
                 } catch {
                     NSLog("ConfigManager: failed reading config: \(error)")
+                    NSLog("ConfigManager: Creating a new config file due to read error.")
+                    persistLocked()
                 }
             } else {
+                // Log that the config file does not exist
+                NSLog("ConfigManager: Config file does not exist at path: \(path). Creating a new empty config file.")
+                
                 // Create empty file
                 persistLocked()
             }
@@ -78,18 +99,16 @@ final class ConfigManager {
             try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
             try data.write(to: URL(fileURLWithPath: path), options: .atomic)
             
-            // Set appropriate permissions if in secure directory
-            if dir.contains("/usr/local/bin/SecOpsNotifierService") {
-                #if !targetEnvironment(simulator)
-                let task = Process()
-                task.launchPath = "/usr/bin/chmod"
-                task.arguments = ["640", path] // Owner read-write, group read, others nothing
-                try task.run()
-                task.waitUntilExit()
-                #endif
-                
-                NSLog("ConfigManager: successfully wrote to secure config file: \(path)")
-            }
+            // Set appropriate permissions for secure directory
+            #if !targetEnvironment(simulator)
+            let task = Process()
+            task.launchPath = "/usr/bin/chmod"
+            task.arguments = ["640", path] // Owner read-write, group read, others nothing
+            try task.run()
+            task.waitUntilExit()
+            #endif
+            
+            NSLog("ConfigManager: successfully wrote to secure config file: \(path)")
         } catch {
             NSLog("ConfigManager: failed writing config: \(error). Ensure the app has necessary permissions.")
         }

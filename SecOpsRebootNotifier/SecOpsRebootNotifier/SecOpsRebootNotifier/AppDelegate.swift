@@ -8,11 +8,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let arguments = CommandLine.arguments.dropFirst()
         let config = AppConfiguration.parse(from: Array(arguments))
         
-        // Use secure path for config file instead of /tmp
-        let secureDir = WritablePathResolver.resolveSecureConfigDir()
-        let cfgPath = "\(secureDir)/SecOpsNotifierConfig.json"
-        
-        let cfgMgr = ConfigManager(path: cfgPath)
+        // ConfigManager now enforces the secure path internally
+        let cfgMgr = ConfigManager(path: "")
         self.configManager = cfgMgr
         
         // Determine initial countdown override: if scheduled_time exists and in future, derive remaining.
