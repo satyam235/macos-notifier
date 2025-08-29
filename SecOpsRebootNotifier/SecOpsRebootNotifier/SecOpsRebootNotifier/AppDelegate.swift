@@ -7,8 +7,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         let arguments = CommandLine.arguments.dropFirst()
         let config = AppConfiguration.parse(from: Array(arguments))
-    // Config file now fixed in /tmp for both reading & writing.
-    let cfgPath = "/tmp/SecOpsNotifierConfig.json"
+        
+        // Use secure path for config file instead of /tmp
+        let secureDir = WritablePathResolver.resolveSecureConfigDir()
+        let cfgPath = "\(secureDir)/SecOpsNotifierConfig.json"
+        
         let cfgMgr = ConfigManager(path: cfgPath)
         self.configManager = cfgMgr
         

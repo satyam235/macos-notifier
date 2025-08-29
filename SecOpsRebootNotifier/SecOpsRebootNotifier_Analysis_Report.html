@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecOps Reboot Notification System Analysis</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f7f9fc;
+        }
+        
+        header {
+            background-color: #1a73e8;
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.4em;
+            margin-bottom: 10px;
+        }
+        
+        h2 {
+            font-size: 1.8em;
+            margin-top: 30px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+            color: #1a73e8;
+        }
+        
+        h3 {
+            font-size: 1.4em;
+            margin-top: 25px;
+            color: #174ea6;
+        }
+        
+        .summary {
+            background-color: #e8f0fe;
+            padding: 15px;
+            border-left: 5px solid #1a73e8;
+            margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .scenario {
+            background-color: white;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .scenario-header {
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #174ea6;
+        }
+        
+        .steps {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .steps ol {
+            margin-left: 20px;
+            padding-left: 20px;
+        }
+        
+        .result {
+            background-color: #e6f4ea;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .result ul {
+            margin-left: 20px;
+            padding-left: 20px;
+        }
+        
+        .issues {
+            background-color: #fce8e6;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .issues ul {
+            margin-left: 20px;
+            padding-left: 20px;
+        }
+        
+        .code {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #f5f5f5;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #d73a49;
+        }
+        
+        .architecture {
+            display: flex;
+            justify-content: space-between;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .component {
+            flex: 1;
+            min-width: 300px;
+            background-color: white;
+            margin: 10px;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .component h3 {
+            color: #174ea6;
+            margin-top: 0;
+        }
+        
+        .recommendations {
+            background-color: white;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 30px 0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .recommendation-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .recommendation-item:last-child {
+            border-bottom: none;
+        }
+        
+        .severity-high {
+            color: #d73a49;
+            font-weight: bold;
+        }
+        
+        .severity-medium {
+            color: #e36209;
+            font-weight: bold;
+        }
+        
+        .severity-low {
+            color: #0366d6;
+            font-weight: bold;
+        }
+        
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .architecture {
+                flex-direction: column;
+            }
+            
+            .component {
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>SecOps Reboot Notification System Analysis</h1>
+        <p>A comprehensive report on the interaction between the Go server script and macOS notification application</p>
+        <p><em>Report Date: August 28, 2025</em></p>
+    </header>
+    
+    <div class="summary">
+        <h2>Executive Summary</h2>
+        <p>This report analyzes the SecOps reboot notification system which consists of a Go-based server script and a macOS notifier application. The system is designed to notify users about required system reboots after security updates and provide options to either reboot immediately or delay the reboot.</p>
+        <p>Our analysis identified several critical issues including broken reboot functionality, potential race conditions, security concerns with temporary files, and limited error handling. The dry run scenarios demonstrate how these issues manifest in real-world usage.</p>
+    </div>
+    
+    <h2>System Architecture Overview</h2>
+    
+    <div class="architecture">
+        <div class="component">
+            <h3>Go Server</h3>
+            <p>The Go server script is the central controller responsible for:</p>
+            <ul>
+                <li>Detecting when the system requires a reboot</li>
+                <li>Managing the reboot notification process</li>
+                <li>Scheduling and executing reboots</li>
+                <li>Writing to the shared configuration file</li>
+            </ul>
+        </div>
+        
+        <div class="component">
+            <h3>macOS Notifier App</h3>
+            <p>A Swift-based application responsible for:</p>
+            <ul>
+                <li>Displaying reboot notifications to users</li>
+                <li>Providing options to reboot or delay</li>
+                <li>Reading from and writing to the shared configuration file</li>
+                <li>Managing countdown timers and user interactions</li>
+            </ul>
+        </div>
+        
+        <div class="component">
+            <h3>Shared Configuration</h3>
+            <p>A JSON file located at <span class="code">/tmp/SecOpsNotifierConfig.json</span> that facilitates communication between the Go server and the macOS app, containing:</p>
+            <ul>
+                <li><span class="code">custom_message</span>: Message displayed to users</li>
+                <li><span class="code">reboot_config</span>: Type of reboot (graceful, forced)</li>
+                <li><span class="code">delay_counter</span>: Number of remaining delays</li>
+                <li><span class="code">scheduled_time</span>: When the next notification should appear</li>
+                <li><span class="code">task_scheduled</span>: Whether a reboot task has been scheduled</li>
+                <li><span class="code">reboot_now</span>: Flag to trigger immediate reboot</li>
+            </ul>
+        </div>
+    </div>
+    
+    <h2>Dry Run Scenarios</h2>
+    
+    <div class="scenario">
+        <div class="scenario-header">Scenario 1: Normal Reboot Required Flow</div>
+        <p><strong>Situation</strong>: System requires a reboot due to security updates.</p>
+        
+        <div class="steps">
+            <h4>Steps:</h4>
+            <ol>
+                <li>Go server detects reboot is required using <span class="code">checkIfRebootRequired()</span></li>
+                <li>Go server writes to <span class="code">/tmp/SecOpsNotifierConfig.json</span> with initial configuration</li>
+                <li>Go server launches the macOS notifier app</li>
+                <li>macOS app reads the config and displays notification panel in top-right corner</li>
+                <li>User sees countdown timer showing "Auto reboot in X minutes"</li>
+                <li>User has options button to either "Reboot Now" or select delay options</li>
+            </ol>
+        </div>
+        
+        <div class="result">
+            <h4>Result:</h4>
+            <ul>
+                <li>Notification shows correctly with countdown</li>
+                <li>User can choose to reboot immediately or delay</li>
+                <li>If timer reaches zero, system initiates reboot</li>
+            </ul>
+        </div>
+        
+        <div class="issues">
+            <h4>Issues:</h4>
+            <ul>
+                <li><span class="severity-high">Critical</span>: Reboot functionality is commented out in the Go script for macOS</li>
+                <li>Notification window appears but actual reboot may not occur</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="scenario">
+        <div class="scenario-header">Scenario 2: User Chooses "Reboot Now"</div>
+        <p><strong>Situation</strong>: User decides to reboot immediately after seeing notification.</p>
+        
+        <div class="steps">
+            <h4>Steps:</h4>
+            <ol>
+                <li>User clicks "Options" button in notification</li>
+                <li>User selects "Reboot Now" from dropdown</li>
+                <li>macOS app calls <span class="code">rebootNow()</span> function</li>
+                <li>App writes to config file setting <span class="code">reboot_now = true</span></li>
+                <li>App logs action and exits</li>
+                <li>Go server detects <span class="code">reboot_now = true</span> in config</li>
+                <li>Go server attempts to schedule immediate reboot</li>
+            </ol>
+        </div>
+        
+        <div class="result">
+            <h4>Result:</h4>
+            <ul>
+                <li>macOS app closes properly</li>
+                <li>Log shows reboot action</li>
+                <li>Config file updated correctly</li>
+                <li>But actual reboot doesn't occur due to commented code in Go script</li>
+            </ul>
+        </div>
+        
+        <div class="issues">
+            <h4>Issues:</h4>
+            <ul>
+                <li><span class="severity-high">Critical</span>: Even though UI flow works, the actual reboot command is commented out</li>
+                <li>User thinks they initiated reboot but system remains running</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="scenario">
+        <div class="scenario-header">Scenario 3: User Delays Reboot</div>
+        <p><strong>Situation</strong>: User wants to delay reboot to continue working.</p>
+        
+        <div class="steps">
+            <h4>Steps:</h4>
+            <ol>
+                <li>User clicks "Options" button</li>
+                <li>User selects a delay option (e.g., "Remind in 2 hrs")</li>
+                <li>App calls <span class="code">applyDelay(seconds)</span> function</li>
+                <li>App updates config file with new <span class="code">scheduled_time</span> and decrements <span class="code">delay_counter</span></li>
+                <li>App logs action and exits</li>
+                <li>Go server reads updated config</li>
+                <li>Go server creates <span class="code">/tmp/secops_notifier_task.sh</span> script to run at scheduled time</li>
+            </ol>
+        </div>
+        
+        <div class="result">
+            <h4>Result:</h4>
+            <ul>
+                <li>Delay is registered successfully</li>
+                <li>New scheduled time is saved to config</li>
+                <li>Background task is created to show notification again later</li>
+                <li>Notification disappears temporarily</li>
+            </ul>
+        </div>
+        
+        <div class="issues">
+            <h4>Issues:</h4>
+            <ul>
+                <li><span class="severity-medium">Moderate</span>: If <span class="code">delay_counter</span> reaches zero, user can no longer delay further</li>
+                <li><span class="severity-high">Critical</span>: Script in <span class="code">/tmp</span> could be tampered with by users</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="scenario">
+        <div class="scenario-header">Scenario 4: Scheduled Time Arrives After Delay</div>
+        <p><strong>Situation</strong>: The delayed reboot time has arrived.</p>
+        
+        <div class="steps">
+            <h4>Steps:</h4>
+            <ol>
+                <li>Background script <span class="code">/tmp/secops_notifier_task.sh</span> runs at scheduled time</li>
+                <li>Script updates config file setting <span class="code">reboot_now = true</span></li>
+                <li>Script launches notifier app</li>
+                <li>Notifier app displays with immediate countdown</li>
+                <li>User must reboot or set another delay (if allowed)</li>
+            </ol>
+        </div>
+        
+        <div class="result">
+            <h4>Result:</h4>
+            <ul>
+                <li>Notification appears again at scheduled time</li>
+                <li>User gets another chance to reboot or delay</li>
+                <li>If delay options exhausted, only "Reboot Now" is available</li>
+            </ul>
+        </div>
+        
+        <div class="issues">
+            <h4>Issues:</h4>
+            <ul>
+                <li><span class="severity-high">Critical</span>: Potential race condition if Go server and script update config simultaneously</li>
+                <li><span class="severity-medium">Moderate</span>: Background script doesn't check if notifier is already running</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="scenario">
+        <div class="scenario-header">Scenario 5: Forced Reboot After Patch</div>
+        <p><strong>Situation</strong>: Critical security patch requires immediate reboot with no delay option.</p>
+        
+        <div class="steps">
+            <h4>Steps:</h4>
+            <ol>
+                <li>Go server sets <span class="code">reboot_config = "Force reboot after patch deployment"</span> in config</li>
+                <li>Go server launches notifier app</li>
+                <li>App reads config and sees forced reboot</li>
+                <li>App displays notification with no delay options</li>
+                <li>Only "Reboot Now" option is available</li>
+                <li>Timer counts down to automatic reboot</li>
+            </ol>
+        </div>
+        
+        <div class="result">
+            <h4>Result:</h4>
+            <ul>
+                <li>User gets notification but cannot delay reboot</li>
+                <li>Countdown proceeds to automatic reboot</li>
+                <li>Options menu only shows "Reboot Now"</li>
+            </ul>
+        </div>
+        
+        <div class="issues">
+            <h4>Issues:</h4>
+            <ul>
+                <li><span class="severity-medium">Moderate</span>: Forced reboot mode provides no flexibility for users</li>
+                <li><span class="severity-high">Critical</span>: Critical work might be lost if not saved in time</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="scenario">
+        <div class="scenario-header">Scenario 6: System Already Rebooted</div>
+        <p><strong>Situation</strong>: System has already completed reboot but notification service still running.</p>
+        
+        <div class="steps">
+            <h4>Steps:</h4>
+            <ol>
+                <li>Go server checks reboot requirement with <span class="code">checkIfRebootRequired()</span></li>
+                <li>Function returns <span class="code">false</span> indicating no reboot needed</li>
+                <li>Go server logs "Machine Rebooted Successfully"</li>
+                <li>Go server calls <span class="code">patchScan()</span> to check for new patches</li>
+                <li>Go server calls <span class="code">stopAndRemoveService()</span> to clean up</li>
+            </ol>
+        </div>
+        
+        <div class="result">
+            <h4>Result:</h4>
+            <ul>
+                <li>System correctly identifies reboot is complete</li>
+                <li>Service cleans up properly</li>
+                <li>No unnecessary notifications shown to user</li>
+            </ul>
+        </div>
+        
+        <div class="issues">
+            <h4>Issues:</h4>
+            <ul>
+                <li><span class="severity-medium">Moderate</span>: If reboot check fails due to error, might incorrectly assume reboot completed</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="scenario">
+        <div class="scenario-header">Scenario 7: Multiple Delay Actions</div>
+        <p><strong>Situation</strong>: User repeatedly delays reboot using up all available delays.</p>
+        
+        <div class="steps">
+            <h4>Steps:</h4>
+            <ol>
+                <li>User receives notification</li>
+                <li>User delays reboot (delay_counter = 2)</li>
+                <li>Later, notification appears again</li>
+                <li>User delays again (delay_counter = 1)</li>
+                <li>Notification appears one last time</li>
+                <li>User tries to delay again (delay_counter = 0)</li>
+            </ol>
+        </div>
+        
+        <div class="result">
+            <h4>Result:</h4>
+            <ul>
+                <li>First two delays work normally</li>
+                <li>On final notification, delay options are removed from menu</li>
+                <li>Only "Reboot Now" option remains</li>
+                <li>User must reboot at this point</li>
+            </ul>
+        </div>
+        
+        <div class="issues">
+            <h4>Issues:</h4>
+            <ul>
+                <li><span class="severity-low">Low</span>: No visual indication of remaining delays until options disappear</li>
+                <li><span class="severity-medium">Moderate</span>: Hard limit might force reboot at inconvenient time</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="scenario">
+        <div class="scenario-header">Scenario 8: Configuration File Corruption</div>
+        <p><strong>Situation</strong>: The shared JSON configuration file becomes corrupted.</p>
+        
+        <div class="steps">
+            <h4>Steps:</h4>
+            <ol>
+                <li>Config file becomes malformed JSON</li>
+                <li>Go server tries to read config but gets error</li>
+                <li>macOS app tries to read config but also gets error</li>
+                <li>Default behavior in app shows notification with standard message</li>
+                <li>App can't write updates back to config</li>
+            </ol>
+        </div>
+        
+        <div class="result">
+            <h4>Result:</h4>
+            <ul>
+                <li>System falls back to default behavior</li>
+                <li>Basic notification still appears</li>
+                <li>But user actions might not be saved properly</li>
+                <li>Communication between components breaks down</li>
+            </ul>
+        </div>
+        
+        <div class="issues">
+            <h4>Issues:</h4>
+            <ul>
+                <li><span class="severity-high">Critical</span>: No recovery mechanism for corrupted config</li>
+                <li><span class="severity-medium">Moderate</span>: Could lead to inconsistent state or repeated notifications</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="scenario">
+        <div class="scenario-header">Scenario 9: Multiple Notifications on Same System</div>
+        <p><strong>Situation</strong>: Multiple instances of notification app launch.</p>
+        
+        <div class="steps">
+            <h4>Steps:</h4>
+            <ol>
+                <li>First notification appears</li>
+                <li>Due to a timing issue, Go server launches second instance</li>
+                <li>Two notification windows appear simultaneously</li>
+                <li>User interacts with one window</li>
+            </ol>
+        </div>
+        
+        <div class="result">
+            <h4>Result:</h4>
+            <ul>
+                <li>Multiple windows confuse user</li>
+                <li>Actions in one window might not be reflected in other</li>
+                <li>Race condition writing to same config file</li>
+            </ul>
+        </div>
+        
+        <div class="issues">
+            <h4>Issues:</h4>
+            <ul>
+                <li><span class="severity-high">Critical</span>: No instance management to prevent multiple notifications</li>
+                <li><span class="severity-high">Critical</span>: Could lead to conflicting states</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="scenario">
+        <div class="scenario-header">Scenario 10: System Sleep During Countdown</div>
+        <p><strong>Situation</strong>: User puts system to sleep during reboot countdown.</p>
+        
+        <div class="steps">
+            <h4>Steps:</h4>
+            <ol>
+                <li>Notification appears with countdown</li>
+                <li>User puts system to sleep</li>
+                <li>System wakes up later</li>
+                <li>Countdown timer continues from where it left off</li>
+            </ol>
+        </div>
+        
+        <div class="result">
+            <h4>Result:</h4>
+            <ul>
+                <li>Timer correctly accounts for sleep time</li>
+                <li>Notification still visible after wake</li>
+                <li>Reboot process continues</li>
+            </ul>
+        </div>
+        
+        <div class="issues">
+            <h4>Issues:</h4>
+            <ul>
+                <li><span class="severity-medium">Moderate</span>: Long sleep periods might invalidate the need for reboot timing</li>
+                <li><span class="severity-medium">Moderate</span>: No mechanism to check if reboot is still required after long sleep</li>
+            </ul>
+        </div>
+    </div>
+    
+    <h2>Key Issues Summary</h2>
+    
+    <div class="recommendations">
+        <div class="recommendation-item">
+            <h3><span class="severity-high">Critical</span>: Broken Reboot Mechanism</h3>
+            <p>The reboot code in the Go script for macOS is commented out, causing the entire reboot process to fail silently. Users see notifications but the system will not actually reboot.</p>
+            <p><strong>Recommendation:</strong> Uncomment and properly implement the reboot functionality in the Go server script.</p>
+        </div>
+        
+        <div class="recommendation-item">
+            <h3><span class="severity-high">Critical</span>: Race Conditions</h3>
+            <p>Multiple processes writing to the same config file without proper synchronization can lead to lost updates or inconsistent state.</p>
+            <p><strong>Recommendation:</strong> Implement proper file locking mechanisms or use a more robust IPC method for coordination.</p>
+        </div>
+        
+        <div class="recommendation-item">
+            <h3><span class="severity-high">Critical</span>: Temporary File Security</h3>
+            <p>Using <span class="code">/tmp</span> for critical scripts and configuration poses security risks as these files can be modified by any user.</p>
+            <p><strong>Recommendation:</strong> Move configuration and scripts to a secure location with appropriate permissions, such as <span class="code">/Library/Application Support/SecOps/</span> with proper access controls.</p>
+        </div>
+        
+        <div class="recommendation-item">
+            <h3><span class="severity-medium">Moderate</span>: Limited Error Handling</h3>
+            <p>There's limited error handling and recovery mechanisms when things go wrong, such as with corrupted configuration.</p>
+            <p><strong>Recommendation:</strong> Implement robust error handling with fallback mechanisms and automatic recovery.</p>
+        </div>
+        
+        <div class="recommendation-item">
+            <h3><span class="severity-high">Critical</span>: Process Management</h3>
+            <p>No proper management of notification instances can lead to duplicate windows and confused user experience.</p>
+            <p><strong>Recommendation:</strong> Implement singleton pattern for the notifier app to prevent multiple instances.</p>
+        </div>
+        
+        <div class="recommendation-item">
+            <h3><span class="severity-low">Low</span>: Limited User Feedback</h3>
+            <p>Users don't know how many delay opportunities remain until they're exhausted.</p>
+            <p><strong>Recommendation:</strong> Add visual indication of remaining delays in the notification UI.</p>
+        </div>
+        
+        <div class="recommendation-item">
+            <h3><span class="severity-medium">Moderate</span>: Timing Issues</h3>
+            <p>The system doesn't account well for system sleep or shutdown events during the reboot countdown process.</p>
+            <p><strong>Recommendation:</strong> Implement checks after system wake to validate reboot requirements and adjust timing accordingly.</p>
+        </div>
+    </div>
+    
+    <h2>Conclusion</h2>
+    <div class="summary">
+        <p>The SecOps Reboot Notification System has a solid architectural foundation but suffers from several critical implementation issues that affect its reliability, security, and usability. The most urgent concern is the non-functional reboot mechanism on macOS, followed by race conditions and security vulnerabilities in file handling.</p>
+        <p>By addressing these issues, particularly the critical ones highlighted in this report, the system can be made significantly more robust and reliable. Implementation of proper inter-process communication, secure file storage, and improved error handling would transform this into a production-ready solution.</p>
+    </div>
+    
+    <footer>
+        <p>SecOps Reboot Notification System Analysis &copy; 2025</p>
+        <p>Generated on August 28, 2025</p>
+    </footer>
+</body>
+</html>

@@ -7,6 +7,39 @@ struct WritablePathResolver {
         let baseDir: String
     }
     
+    static func resolveSecureConfigDir() -> String {
+        let secureDir = "/usr/local/bin/SecOpsNotifierService"
+        let fm = FileManager.default
+        
+        // Check if directory exists, if not create it
+        do {
+            var isDir: ObjCBool = false
+            let exists = fm.fileExists(atPath: secureDir, isDirectory: &isDir)
+            
+            if !exists {
+                try fm.createDirectory(atPath: secureDir, withIntermediateDirectories: true)
+                
+                #if !targetEnvironment(simulator)
+                // Set permissions (0750 = rwxr-x---)
+                // This requires root permissions, so it might fail if the app isn't run with elevated privileges
+                let task = Process()
+                task.launchPath = "/usr/bin/chmod"
+                task.arguments = ["750", secureDir]
+                try task.run()
+                task.waitUntilExit()
+                #endif
+                
+                NSLog("Created secure config directory: \(secureDir)")
+            } else if !isDir.boolValue {
+                NSLog("Warning: \(secureDir) exists but is not a directory")
+            }
+        } catch {
+            NSLog("Failed to create/set permissions on secure config directory: \(error)")
+        }
+        
+        return secureDir
+    }
+    
     static func resolve(stateFileName: String = "reboot_state.json",
                         historyFileName: String = "reboot_action_history.log") -> Result {
         let fm = FileManager.default

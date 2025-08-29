@@ -29,6 +29,14 @@ final class ConfigManager {
     
     init(path: String) {
         self.path = (path as NSString).expandingTildeInPath
+        
+        // Log if using secure path
+        if path.contains("/usr/local/bin/SecOpsNotifierService") {
+            NSLog("ConfigManager: Using secure path for config file: \(path)")
+        } else if path.contains("/tmp") {
+            NSLog("ConfigManager: WARNING - Using insecure /tmp path for config file: \(path)")
+        }
+        
         load()
     }
     
@@ -69,8 +77,21 @@ final class ConfigManager {
             let dir = (path as NSString).deletingLastPathComponent
             try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
             try data.write(to: URL(fileURLWithPath: path), options: .atomic)
+            
+            // Set appropriate permissions if in secure directory
+            if dir.contains("/usr/local/bin/SecOpsNotifierService") {
+                #if !targetEnvironment(simulator)
+                let task = Process()
+                task.launchPath = "/usr/bin/chmod"
+                task.arguments = ["640", path] // Owner read-write, group read, others nothing
+                try task.run()
+                task.waitUntilExit()
+                #endif
+                
+                NSLog("ConfigManager: successfully wrote to secure config file: \(path)")
+            }
         } catch {
-            NSLog("ConfigManager: failed writing config: \(error)")
+            NSLog("ConfigManager: failed writing config: \(error). Ensure the app has necessary permissions.")
         }
     }
     

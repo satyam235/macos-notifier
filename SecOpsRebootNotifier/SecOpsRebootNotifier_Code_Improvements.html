@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecOps Reboot Notification System - Code Improvements</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f7f9fc;
+        }
+        
+        header {
+            background-color: #1a73e8;
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.4em;
+            margin-bottom: 10px;
+        }
+        
+        h2 {
+            font-size: 1.8em;
+            margin-top: 30px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+            color: #1a73e8;
+        }
+        
+        h3 {
+            font-size: 1.4em;
+            margin-top: 25px;
+            color: #174ea6;
+        }
+        
+        .summary {
+            background-color: #e8f0fe;
+            padding: 15px;
+            border-left: 5px solid #1a73e8;
+            margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .improvement {
+            background-color: white;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .code {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #f5f5f5;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #d73a49;
+        }
+        
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+            border: 1px solid #e1e4e8;
+        }
+        
+        .old-code {
+            background-color: #ffeef0;
+            border-left: 3px solid #d73a49;
+        }
+        
+        .new-code {
+            background-color: #e6ffed;
+            border-left: 3px solid #28a745;
+            margin-top: 10px;
+        }
+        
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .severity-high {
+            color: #d73a49;
+            font-weight: bold;
+        }
+        
+        .severity-medium {
+            color: #e36209;
+            font-weight: bold;
+        }
+        
+        .severity-low {
+            color: #0366d6;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>SecOps Reboot Notification System - Code Improvements</h1>
+        <p>Detailed explanation of fixes implemented in the improved Go server script</p>
+        <p><em>August 28, 2025</em></p>
+    </header>
+    
+    <div class="summary">
+        <h2>Implementation Summary</h2>
+        <p>This document describes the improvements made to the SecOps Reboot Notification System's Go server script. The updates address all the critical issues identified in the analysis report, except for the actual reboot functionality which was left commented out as requested.</p>
+    </div>
+    
+    <h2>1. Race Conditions Fixed</h2>
+    
+    <div class="improvement">
+        <h3>Mutex for Config File Access</h3>
+        <p>Added a mutex to prevent race conditions when multiple processes try to access the configuration file simultaneously.</p>
+        
+        <pre class="old-code">
+// Old code had no synchronization for file access
+func saveConfig() error {
+    data, _ := json.MarshalIndent(SECOPS_NOTIFIER_CONFIG, "", "    ")
+    _ = ioutil.WriteFile(SECOPS_NOTIFIER_CONFIG_FILE_PATH, updatedConfig, 0644)
+}
+</pre>
+        
+        <pre class="new-code">
+// New code with proper locking
+var configMutex sync.Mutex
+
+func saveConfig() error {
+    configMutex.Lock()
+    defer configMutex.Unlock()
+    
+    // Update timestamp
+    SECOPS_NOTIFIER_CONFIG.LastUpdated = time.Now().Format(time.RFC3339)
+    
+    // Marshal with indentation for better readability
+    data, err := json.MarshalIndent(SECOPS_NOTIFIER_CONFIG, "", "  ")
+    if err != nil {
+        return fmt.Errorf("error marshaling config: %v", err)
+    }
+    
+    // Write to a temporary file first
+    tmpFile := SECOPS_NOTIFIER_CONFIG_FILE_PATH + ".tmp"
+    if err := os.WriteFile(tmpFile, data, 0640); err != nil {
+        return fmt.Errorf("error writing temporary config file: %v", err)
+    }
+    
+    // Rename for atomic update
+    if err := os.Rename(tmpFile, SECOPS_NOTIFIER_CONFIG_FILE_PATH); err != nil {
+        return fmt.Errorf("error renaming temporary config file: %v", err)
+    }
+    
+    return nil
+}
+</pre>
+    </div>
+    
+    <div class="improvement">
+        <h3>File Locking in Shell Scripts</h3>
+        <p>Added <code>flock</code> to prevent race conditions in shell scripts that modify the config file.</p>
+        
+        <pre class="old-code">
+# Old code in shell script with no file locking
+update_json(){ /usr/bin/sed -i '' 's/"reboot_now": *[^,}][^,}]*/"reboot_now": true/' "$JSON_FILE"; }
+</pre>
+        
+        <pre class="new-code">
+# New code with file locking to prevent race conditions
+update_json() {
+    (
+        if flock -n 200; then
+            /usr/bin/sed -i '' 's/"reboot_now": *[^,}][^,}]*/"reboot_now": true/' "$JSON_FILE"
+            flock -u 200
+        else
+            echo "Could not acquire lock for $JSON_FILE" >&2
+        fi
+    ) 200>"$LOCK_FILE"
+}
+</pre>
+    </div>
+    
+    <h2>2. Security Concerns Addressed</h2>
+    
+    <div class="improvement">
+        <h3>Moved Files from /tmp to Secure Locations</h3>
+        <p>Relocated configuration and script files from insecure <code>/tmp</code> directory to more secure system locations.</p>
+        
+        <pre class="old-code">
+// Old code used /tmp for macOS files
+if runtime.GOOS == "darwin" {
+    SECOPS_NOTIFIER_CONFIG_FILE_PATH = "/tmp/" + SECOPS_NOTIFIER_CONFIG_FILE_NAME
+    scriptPath := "/tmp/secops_notifier_task.sh"
+    // ...
+}
+</pre>
+        
+        <pre class="new-code">
+// New code uses secure locations
+func getSecurePath() (string, error) {
+    var baseDir string
+    
+    if runtime.GOOS == "windows" {
+        baseDir = filepath.Join(os.Getenv("ProgramData"), "SecOpsNotifierService")
+    } else if runtime.GOOS == "linux" {
+        baseDir = "/usr/local/bin/SecOpsNotifierService"
+    } else if runtime.GOOS == "darwin" {
+        // Use a more secure location on macOS than /tmp
+        baseDir = "/Library/Application Support/SecOpsNotifierService"
+        // Fallback to user library if we don't have permission for system library
+        if _, err := os.Stat(baseDir); os.IsPermission(err) {
+            homeDir, err := os.UserHomeDir()
+            if err != nil {
+                return "", err
+            }
+            baseDir = filepath.Join(homeDir, "Library/Application Support/SecOpsNotifierService")
+        }
+    } else {
+        return "", fmt.Errorf("unsupported OS: %s", runtime.GOOS)
+    }
+    
+    // Create directory with secure permissions
+    if err := os.MkdirAll(baseDir, 0750); err != nil {
+        return "", err
+    }
+    
+    return baseDir, nil
+}
+</pre>
+    </div>
+    
+    <div class="improvement">
+        <h3>Improved File Permissions</h3>
+        <p>Set stricter file permissions on configuration files and scripts.</p>
+        
+        <pre class="old-code">
+// Old code used overly permissive permissions
+_ = ioutil.WriteFile(SECOPS_NOTIFIER_CONFIG_FILE_PATH, updatedConfig, 0644)
+</pre>
+        
+        <pre class="new-code">
+// New code uses more restrictive permissions
+if err := os.WriteFile(tmpFile, data, 0640); err != nil {
+    return fmt.Errorf("error writing temporary config file: %v", err)
+}
+
+// For executable scripts
+if err := os.WriteFile(scriptPath, []byte(scriptContent), 0750); err != nil {
+    log.Printf("Error creating task script: %v", err)
+    return
+}
+</pre>
+    </div>
+    
+    <h2>3. Process Management Improvements</h2>
+    
+    <div class="improvement">
+        <h3>Single Instance Enforcement</h3>
+        <p>Added process lock to prevent multiple instances of the application from running simultaneously.</p>
+        
+        <pre class="new-code">
+// Process identifier to prevent multiple instances
+PROCESS_ID_FILE string
+
+// acquireProcessLock ensures only one instance of the application is running
+func acquireProcessLock() (bool, error) {
+    // Check if process ID file exists
+    if _, err := os.Stat(PROCESS_ID_FILE); err == nil {
+        // Read the PID from file
+        pidBytes, err := os.ReadFile(PROCESS_ID_FILE)
+        if err != nil {
+            return false, fmt.Errorf("error reading PID file: %v", err)
+        }
+        
+        pidStr := strings.TrimSpace(string(pidBytes))
+        pid, err := parseInt(pidStr)
+        if err != nil {
+            // Invalid PID, we can overwrite
+            debugLog("Invalid PID in file, acquiring lock")
+        } else {
+            // Check if process is still running
+            running, err := isProcessRunning(pid)
+            if err != nil {
+                debugLog("Error checking if process is running:", err)
+            } else if running {
+                return false, fmt.Errorf("another instance is already running with PID %d", pid)
+            }
+            debugLog("Process with PID", pid, "is not running, acquiring lock")
+        }
+    }
+    
+    // Write our PID to the file
+    pid := os.Getpid()
+    if err := os.WriteFile(PROCESS_ID_FILE, []byte(fmt.Sprintf("%d", pid)), 0640); err != nil {
+        return false, fmt.Errorf("error writing PID file: %v", err)
+    }
+    
+    return true, nil
+}
+</pre>
+    </div>
+    
+    <div class="improvement">
+        <h3>Duplicate Application Launch Prevention</h3>
+        <p>Added checks to prevent launching multiple instances of the notifier app.</p>
+        
+        <pre class="new-code">
+// Check if notifier is already running before launching
+check_notifier_running() {
+    pgrep -f "SecOpsRebootNotifier" > /dev/null
+    return $?
+}
+
+// Only launch if not already running
+if [ -d "$NOTIFIER_APP" ] && ! check_notifier_running; then
+    /usr/bin/open "$NOTIFIER_APP"
+    /usr/bin/osascript -e "display notification \"Launching reboot notifier...\" with title \"SecOps Notifier\""
+fi
+</pre>
+    </div>
+    
+    <h2>4. Improved Error Handling</h2>
+    
+    <div class="improvement">
+        <h3>Comprehensive Error Handling</h3>
+        <p>Added proper error handling throughout the codebase with meaningful error messages and appropriate responses.</p>
+        
+        <pre class="old-code">
+// Old code with minimal error handling
+configFile, err := ioutil.ReadFile(SECOPS_NOTIFIER_CONFIG_FILE_PATH)
+if err != nil {
+    log.Printf("Error reading config file: %v", err)
+    return
+}
+</pre>
+        
+        <pre class="new-code">
+// New code with proper error handling and recovery
+func loadConfig() error {
+    configMutex.Lock()
+    defer configMutex.Unlock()
+    
+    debugLog("Loading config from", SECOPS_NOTIFIER_CONFIG_FILE_PATH)
+    
+    if _, err := os.Stat(SECOPS_NOTIFIER_CONFIG_FILE_PATH); os.IsNotExist(err) {
+        // Create a default config if it doesn't exist
+        SECOPS_NOTIFIER_CONFIG = SecOpsNotifierConfig{
+            CustomMessage: "Reboot required to complete important updates.",
+            DelayCounter:  3,
+            RebootConfig:  GRACEFUL_REBOOT,
+            Version:       VERSION,
+            LastUpdated:   time.Now().Format(time.RFC3339),
+        }
+        return saveConfig()
+    }
+    
+    data, err := os.ReadFile(SECOPS_NOTIFIER_CONFIG_FILE_PATH)
+    if err != nil {
+        return fmt.Errorf("error reading config file: %v", err)
+    }
+    
+    err = json.Unmarshal(data, &SECOPS_NOTIFIER_CONFIG)
+    if err != nil {
+        return fmt.Errorf("error parsing config file: %v", err)
+    }
+    
+    // Update version if needed
+    if SECOPS_NOTIFIER_CONFIG.Version != VERSION {
+        SECOPS_NOTIFIER_CONFIG.Version = VERSION
+        SECOPS_NOTIFIER_CONFIG.LastUpdated = time.Now().Format(time.RFC3339)
+        return saveConfig()
+    }
+    
+    return nil
+}
+</pre>
+    </div>
+    
+    <div class="improvement">
+        <h3>Structured Logging</h3>
+        <p>Implemented consistent logging with context information to facilitate troubleshooting.</p>
+        
+        <pre class="new-code">
+// Setup logging
+LOG_FILE_PATH := filepath.Join(securePath, "secops_notifier.log")
+logFile, err = os.OpenFile(LOG_FILE_PATH, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
+if err != nil {
+    return fmt.Errorf("failed to open log file: %v", err)
+}
+
+logger = log.New(logFile, "", log.LstdFlags)
+log.SetOutput(logFile)
+</pre>
+    </div>
+    
+    <h2>5. Atomic Operations</h2>
+    
+    <div class="improvement">
+        <h3>Atomic File Updates</h3>
+        <p>Implemented atomic file operations to prevent corruption from partial writes.</p>
+        
+        <pre class="old-code">
+// Old code directly wrote to the config file
+_ = ioutil.WriteFile(SECOPS_NOTIFIER_CONFIG_FILE_PATH, updatedConfig, 0644)
+</pre>
+        
+        <pre class="new-code">
+// New code uses atomic write pattern
+// Write to a temporary file first
+tmpFile := SECOPS_NOTIFIER_CONFIG_FILE_PATH + ".tmp"
+if err := os.WriteFile(tmpFile, data, 0640); err != nil {
+    return fmt.Errorf("error writing temporary config file: %v", err)
+}
+
+// Rename for atomic update
+if err := os.Rename(tmpFile, SECOPS_NOTIFIER_CONFIG_FILE_PATH); err != nil {
+    return fmt.Errorf("error renaming temporary config file: %v", err)
+}
+</pre>
+    </div>
+    
+    <h2>6. Code Organization and Maintainability</h2>
+    
+    <div class="improvement">
+        <h3>Better Code Structure</h3>
+        <p>Reorganized code with clear function responsibilities and improved documentation.</p>
+        
+        <pre class="new-code">
+// Configuration version tracking
+VERSION = "2.0.0"
+
+// Added to config struct
+type SecOpsNotifierConfig struct {
+    // ... existing fields ...
+    LastUpdated       string   `json:"last_updated"`     // Track when config was last updated
+    Version           string   `json:"version"`          // Track config version
+}
+</pre>
+    </div>
+    
+    <div class="improvement">
+        <h3>Legacy Cleanup</h3>
+        <p>Added functionality to clean up files from previous versions for smooth transitions.</p>
+        
+        <pre class="new-code">
+// cleanupOldScripts removes old script files
+func cleanupOldScripts() {
+    if runtime.GOOS != "darwin" {
+        return
+    }
+    
+    // Clean up any scripts in /tmp that might have been created by older versions
+    oldPaths := []string{
+        "/tmp/secops_notifier_task.sh",
+        "/tmp/secops_mac_reboot_now.sh",
+    }
+    
+    for _, path := range oldPaths {
+        if _, err := os.Stat(path); err == nil {
+            if err := os.Remove(path); err != nil {
+                log.Printf("Error removing old script %s: %v", path, err)
+            } else {
+                log.Printf("Removed old script: %s", path)
+            }
+        }
+    }
+}
+</pre>
+    </div>
+    
+    <h2>Summary of Key Improvements</h2>
+    
+    <div class="summary">
+        <ol>
+            <li><span class="severity-high">Race Conditions:</span> Added mutex locks for config file access and file locking in shell scripts</li>
+            <li><span class="severity-high">Security:</span> Moved files from <code>/tmp</code> to secure locations with proper permissions</li>
+            <li><span class="severity-high">Process Management:</span> Added process locks to ensure only one instance runs at a time</li>
+            <li><span class="severity-medium">Error Handling:</span> Comprehensive error handling with meaningful messages and recovery options</li>
+            <li><span class="severity-medium">Atomic Operations:</span> Implemented atomic file writes to prevent corruption</li>
+            <li><span class="severity-medium">Duplicate Detection:</span> Added checks before launching notifier app to prevent multiple instances</li>
+            <li><span class="severity-low">Code Quality:</span> Improved structure, versioning, and documentation</li>
+            <li><span class="severity-low">Cleanup:</span> Added cleanup of legacy files for smooth version transitions</li>
+        </ol>
+    </div>
+    
+    <h2>Next Steps</h2>
+    
+    <div class="summary">
+        <p>While the script has been significantly improved, there are a few additional enhancements that could be made in future updates:</p>
+        
+        <ol>
+            <li>Uncomment and test the actual reboot functionality for macOS</li>
+            <li>Add more robust reboot status reporting to a centralized monitoring system</li>
+            <li>Implement a more sophisticated IPC mechanism between the Go server and Swift app</li>
+            <li>Add telemetry to track notification effectiveness and user interaction patterns</li>
+            <li>Consider more advanced authentication mechanisms for API calls</li>
+        </ol>
+    </div>
+    
+    <footer>
+        <p>SecOps Reboot Notification System Improvements &copy; 2025</p>
+        <p>Generated on August 28, 2025</p>
+    </footer>
+</body>
+</html>
