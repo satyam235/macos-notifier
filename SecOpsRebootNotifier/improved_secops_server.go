@@ -97,7 +97,7 @@ type CommandResult struct {
 
 func init() {
 	// Set debug mode from environment
-	DEBUG = false
+	DEBUG = true
 	if os.Getenv("SECOPS_DEBUG") == "1" || os.Getenv("SECOPS_DEBUG") == "true" {
 		DEBUG = true
 	}
@@ -119,14 +119,14 @@ func initializeApp() error {
 	}
 
 	logger = log.New(logFile, "", log.LstdFlags)
-	log.SetOutput(logFile)
+	// log.SetOutput(logFile)
 
 	// Set up process lock file
 	PROCESS_ID_FILE = filepath.Join(securePath, "secops_notifier.pid")
 
 	// Set up file paths based on OS
 	if runtime.GOOS == "darwin" {
-		SECOPS_NOTIFIER_CONFIG_FILE_PATH = filepath.Join(securePath, SECOPS_NOTIFIER_CONFIG_FILE_NAME)
+		SECOPS_NOTIFIER_CONFIG_FILE_PATH = filepath.Join("/tmp", SECOPS_NOTIFIER_CONFIG_FILE_NAME)
 		SECOPS_NOTIFIER_FILE_PATH = filepath.Join(securePath, "SecOpsRebootNotifier.app")
 	} else if runtime.GOOS == "windows" {
 		SECOPS_NOTIFIER_CONFIG_FILE_PATH = filepath.Join(securePath, SECOPS_NOTIFIER_CONFIG_FILE_NAME)
@@ -798,6 +798,7 @@ echo "No reboot"`
 		}
 		return strings.Contains(string(output), "System requires a reboot"), nil
 	} else if runtime.GOOS == "darwin" {
+		return true, nil
 		// Check for pending macOS updates that require reboot
 		// First check if SoftwareUpdate indicates pending restart
 		cmd := exec.Command("bash", "-c", "softwareupdate -l | grep -i 'restart required'")

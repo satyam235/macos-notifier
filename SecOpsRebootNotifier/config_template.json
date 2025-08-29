@@ -1,0 +1,16 @@
+{
+  "base_url": "",
+  "jump_host_base_url": "",
+  "task_scheduled": true,
+  "reboot_config": "Graceful Reboot",
+  "reboot_now": false,
+  "scheduled_time": "",
+  "patch_record_id_list": null,
+  "identifier": "",
+  "custom_message": "Please save your work. You have limited postponements.",
+  "delay_counter": 1,
+  "asset": "",
+  "asset_type": "",
+  "last_updated": "2025-08-29T02:49:07-07:00",
+  "version": "2.0.0"
+}

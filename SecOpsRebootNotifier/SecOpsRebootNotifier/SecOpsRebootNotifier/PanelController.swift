@@ -6,9 +6,11 @@ class PanelController: NSObject {
     private let config: ConfigManager?
     private var timer: DispatchSourceTimer?
     
-    private let panelWidth: CGFloat = 360
-    private let topMargin: CGFloat = 12   // tighter margin from top for true top-right feel
-    private let rightMargin: CGFloat = 12 // tighter margin from right
+    class PanelController: NSObject {
+    // MARK: - Panel geometry - hardcoded values
+    private let panelWidth: CGFloat = 320  // Hardcoded width as requested
+    private let topMargin: CGFloat = 16    // Hardcoded top margin as requested
+    private let rightMargin: CGFloat = 24  // Hardcoded right margin as requested
     private let cornerRadius: CGFloat = 16
     private var initialTotalSeconds: Int
     

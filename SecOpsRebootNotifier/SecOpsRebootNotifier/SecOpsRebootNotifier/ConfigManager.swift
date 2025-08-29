@@ -8,7 +8,7 @@ import Foundation
 ///  - task_scheduled: Bool
 ///  - reboot_now: Bool
 /// This manager loads a JSON dictionary (top-level object) and allows selective mutation
-/// while preserving unknown fields.
+/// while preserving unknown fields. All keys must be in snake_case format.
 final class ConfigManager {
     enum RebootConfig: String {
         case graceful = "Graceful Reboot"
