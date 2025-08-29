@@ -163,36 +163,18 @@ func initializeApp() error {
 	return nil
 }
 
-// getSecurePath returns a secure location for storing files based on OS
+// getTempPath returns the temporary directory for storing files
 func getSecurePath() (string, error) {
-	var baseDir string
-
+	// Always use /tmp for consistency across all platforms
 	if runtime.GOOS == "windows" {
-		baseDir = filepath.Join(os.Getenv("ProgramData"), "SecOpsNotifierService")
-	} else if runtime.GOOS == "linux" {
-		baseDir = "/usr/local/bin/SecOpsNotifierService"
-	} else if runtime.GOOS == "darwin" {
-		// Use a more secure location on macOS than /tmp
-		baseDir = "/usr/local/bin/SecOpsNotifierService"
-		// baseDir = "/Library/Application Support/SecOpsNotifierService"
-		// Fallback to user library if we don't have permission for system library
-		// if _, err := os.Stat(baseDir); os.IsPermission(err) {
-		// 	homeDir, err := os.UserHomeDir()
-		// 	if err != nil {
-		// 		return "", err
-		// 	}
-		// 	baseDir = filepath.Join(homeDir, "Library/Application Support/SecOpsNotifierService")
-		// }
+		// On Windows, use the temp directory
+		return os.TempDir(), nil
 	} else {
-		return "", fmt.Errorf("unsupported OS: %s", runtime.GOOS)
+		// On Unix systems, use /tmp explicitly
+		return "/tmp", nil
 	}
 
-	// Create directory with secure permissions
-	if err := os.MkdirAll(baseDir, 0750); err != nil {
-		return "", err
-	}
-
-	return baseDir, nil
+	// No need to create /tmp as it always exists
 }
 
 // Debug logging function that only outputs when DEBUG is true
@@ -510,7 +492,7 @@ func deleteScheduledTask() error {
 		log.Printf("Scheduled task '%s' has been deleted successfully.", TASK_NAME)
 		return nil
 	} else if runtime.GOOS == "linux" {
-		scriptPath := "/usr/local/bin/SecOpsNotifierService/secops_notifier_task.sh"
+		scriptPath := "/tmp/secops_notifier_task.sh"
 		_ = exec.Command("pkill", "-f", scriptPath).Run()
 		if err := os.Remove(scriptPath); err != nil {
 			if !os.IsNotExist(err) {

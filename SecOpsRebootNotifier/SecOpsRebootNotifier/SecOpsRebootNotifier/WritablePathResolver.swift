@@ -1,9 +1,10 @@
 import Foundation
 
 struct WritablePathResolver {
-    // Define the secure path as a static constant for consistency across the app
-    static let secureConfigDirectory = "/usr/local/bin/SecOpsNotifierService"
+    // Define the path constants for consistency across the app
+    static let configDirectory = "/tmp"
     static let configFileName = "SecOpsNotifierConfig.json"
+    static let configPath = "/tmp/SecOpsNotifierConfig.json"
     
     struct Result {
         let stateFile: String
@@ -11,37 +12,14 @@ struct WritablePathResolver {
         let baseDir: String
     }
     
-    static func resolveSecureConfigDir() -> String {
-        let secureDir = secureConfigDirectory
-        let fm = FileManager.default
+    static func resolveConfigDir() -> String {
+        // Simply return /tmp as the directory for configs
+        let tmpDir = configDirectory
         
-        // Check if directory exists, if not create it
-        do {
-            var isDir: ObjCBool = false
-            let exists = fm.fileExists(atPath: secureDir, isDirectory: &isDir)
-            
-            if !exists {
-                try fm.createDirectory(atPath: secureDir, withIntermediateDirectories: true)
-                
-                #if !targetEnvironment(simulator)
-                // Set permissions (0750 = rwxr-x---)
-                // This requires root permissions, so it might fail if the app isn't run with elevated privileges
-                let task = Process()
-                task.launchPath = "/usr/bin/chmod"
-                task.arguments = ["750", secureDir]
-                try task.run()
-                task.waitUntilExit()
-                #endif
-                
-                NSLog("Created secure config directory: \(secureDir)")
-            } else if !isDir.boolValue {
-                NSLog("Warning: \(secureDir) exists but is not a directory")
-            }
-        } catch {
-            NSLog("Failed to create/set permissions on secure config directory: \(error)")
-        }
+        // No need to create /tmp as it always exists
+        NSLog("Using /tmp for configuration storage")
         
-        return secureDir
+        return tmpDir
     }
     
     static func resolve(stateFileName: String = "reboot_state.json",

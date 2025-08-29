@@ -28,11 +28,10 @@ final class ConfigManager {
     private let queue = DispatchQueue(label: "secops.config", attributes: .concurrent)
     
     init(path: String) {
-        // Always use the secure path regardless of the input path
-        let secureDir = WritablePathResolver.resolveSecureConfigDir()
-        self.path = "\(secureDir)/\(WritablePathResolver.configFileName)"
+        // Always use the /tmp path regardless of input
+        self.path = WritablePathResolver.configPath
         
-        NSLog("ConfigManager: Using secure path for config file: \(self.path)")
+        NSLog("ConfigManager: Using path for config file: \(self.path)")
         
         load()
     }
@@ -50,13 +49,10 @@ final class ConfigManager {
         queue.sync(flags: .barrier) {
             let fm = FileManager.default
             
-            // Ensure we're using the secure directory
-            let secureDir = WritablePathResolver.secureConfigDirectory
-            let expectedPath = "\(secureDir)/\(WritablePathResolver.configFileName)"
-            
-            if path != expectedPath {
-                NSLog("ConfigManager: Warning - Not using the expected secure path. Forcing secure path.")
-                path = expectedPath
+            // Simply verify we're using the /tmp path
+            if path != WritablePathResolver.configPath {
+                NSLog("ConfigManager: Warning - Not using /tmp path. Correcting.")
+                path = WritablePathResolver.configPath
             }
             
             if fm.fileExists(atPath: path) {
@@ -77,7 +73,7 @@ final class ConfigManager {
                         persistLocked()
                     }
                 } catch {
-                    NSLog("ConfigManager: failed reading config: \(error)")
+                    NSLog("ConfigManager: Failed reading config: \(error)")
                     NSLog("ConfigManager: Creating a new config file due to read error.")
                     persistLocked()
                 }
@@ -90,28 +86,23 @@ final class ConfigManager {
             }
         }
     }
+        }
+    }
     
     func reload() { load() }
     
     private func persistLocked() {
         do {
             let data = try JSONSerialization.data(withJSONObject: store, options: [.prettyPrinted, .sortedKeys])
-            let dir = (path as NSString).deletingLastPathComponent
-            try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+            
+            // /tmp always exists, so no need to create it
+            
+            // Write the file directly to /tmp
             try data.write(to: URL(fileURLWithPath: path), options: .atomic)
             
-            // Set appropriate permissions for secure directory
-            #if !targetEnvironment(simulator)
-            let task = Process()
-            task.launchPath = "/usr/bin/chmod"
-            task.arguments = ["640", path] // Owner read-write, group read, others nothing
-            try task.run()
-            task.waitUntilExit()
-            #endif
-            
-            NSLog("ConfigManager: successfully wrote to secure config file: \(path)")
+            NSLog("ConfigManager: Successfully wrote to config file: \(path)")
         } catch {
-            NSLog("ConfigManager: failed writing config: \(error). Ensure the app has necessary permissions.")
+            NSLog("ConfigManager: Failed writing config: \(error)")
         }
     }
     
