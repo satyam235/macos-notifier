@@ -6,7 +6,6 @@ class PanelController: NSObject {
     private let config: ConfigManager?
     private var timer: DispatchSourceTimer?
     
-    class PanelController: NSObject {
     // MARK: - Panel geometry - hardcoded values
     private let panelWidth: CGFloat = 320  // Hardcoded width as requested
     private let topMargin: CGFloat = 16    // Hardcoded top margin as requested
@@ -31,17 +30,17 @@ class PanelController: NSObject {
     private var delayMenuController: DelayMenuController!
     
     init(state: RebootState, logger: ActionLogger, config: ConfigManager? = nil) {
-    self.state = state
+        self.state = state
         self.logger = logger
         self.config = config
-    self.initialTotalSeconds = state.remainingSeconds
-    super.init()
+        self.initialTotalSeconds = state.remainingSeconds
+        super.init()
         buildUI()
         configureMenu()
         startTimer()
         writeInitialState()
         observeScreenChanges()
-    applyConfigVisuals()
+        applyConfigVisuals()
     }
     
     deinit {
@@ -55,7 +54,7 @@ class PanelController: NSObject {
     }
     
     private func buildUI() {
-    panel = PersistentPanel(
+        panel = PersistentPanel(
             contentRect: NSRect(x: 0, y: 0, width: panelWidth, height: 140),
             styleMask: [.nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
@@ -197,9 +196,8 @@ class PanelController: NSObject {
         ])
         
         panel.contentView?.layoutSubtreeIfNeeded()
-    panel.contentView?.layoutSubtreeIfNeeded()
-    backgroundView.layoutSubtreeIfNeeded()
-    let requiredHeight = countdownLabel.frame.maxY + 6
+        backgroundView.layoutSubtreeIfNeeded()
+        let requiredHeight = countdownLabel.frame.maxY + 6
         var frame = panel.frame
         frame.size.height = max(requiredHeight, 86)
         panel.setFrame(frame, display: false)
@@ -256,7 +254,7 @@ class PanelController: NSObject {
     }
     
     private func formattedCountdown() -> String {
-    "Auto reboot in \(CountdownFormatter.string(from: state.remainingSeconds))."
+        "Auto reboot in \(CountdownFormatter.string(from: state.remainingSeconds))."
     }
     
     private func rebootNow() {
@@ -487,7 +485,7 @@ private extension PanelController {
         ])
         label.attributedStringValue = attr
     }
-    func animateIntro() {
+    private func animateIntro() {
         let target = self.panel.frame
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             self.panel.alphaValue = 1
