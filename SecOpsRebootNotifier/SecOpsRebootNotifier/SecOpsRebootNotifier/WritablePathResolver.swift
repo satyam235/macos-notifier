@@ -6,7 +6,7 @@ struct WritablePathResolver {
     static let configFileName = "SecOpsNotifierConfig.json"
     static let configPath = "/tmp/SecOpsNotifierConfig.json"
     
-    struct Result {
+    struct PathResult {
         let stateFile: String
         let historyFile: String
         let baseDir: String
@@ -16,10 +16,9 @@ struct WritablePathResolver {
     static func resolveSecureConfigDir() -> String {
         return configDirectory
     }
-    }
     
     static func resolve(stateFileName: String = "reboot_state.json",
-                        historyFileName: String = "reboot_action_history.log") -> Result {
+                        historyFileName: String = "reboot_action_history.log") -> PathResult {
         let fm = FileManager.default
         let home = fm.homeDirectoryForCurrentUser
         
@@ -54,6 +53,6 @@ struct WritablePathResolver {
         let history = chosen.appendingPathComponent(historyFileName).path
         
         print("WritablePathResolver: Selected writable log directory: \(chosen.path)")
-        return Result(stateFile: state, historyFile: history, baseDir: chosen.path)
+        return PathResult(stateFile: state, historyFile: history, baseDir: chosen.path)
     }
 }
