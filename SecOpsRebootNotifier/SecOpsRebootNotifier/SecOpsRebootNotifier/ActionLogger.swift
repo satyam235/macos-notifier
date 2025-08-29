@@ -41,6 +41,31 @@ final class ActionLogger {
         }
     }
     
+    func clearState() {
+        queue.async {
+            do {
+                // Write an empty JSON object to the state file
+                let emptyData = "{}".data(using: .utf8)!
+                try self.writer.writeAtomic(data: emptyData, toPath: self.statePath, permissions: 0o644)
+                NSLog("ActionLogger: Cleared state file")
+            } catch {
+                NSLog("Failed to clear state: \(error)")
+            }
+        }
+    }
+    
+    func clearStateFile() {
+        // Clear the state file immediately (synchronously)
+        do {
+            // Write an empty JSON object to the state file
+            let emptyData = "{}".data(using: .utf8)!
+            try self.writer.writeAtomic(data: emptyData, toPath: self.statePath, permissions: 0o644)
+            NSLog("ActionLogger: Cleared state file on app startup")
+        } catch {
+            NSLog("Failed to clear state file on startup: \(error)")
+        }
+    }
+    
     func writeState(state: RebootState, action: String) {
         queue.async {
             let payload: [String: Any] = [

@@ -13,22 +13,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let cfgMgr = ConfigManager(path: cfgPath)
         self.configManager = cfgMgr
         
-        // Determine initial countdown override: if scheduled_time exists and in future, derive remaining.
-        var countdown = config.countdownSeconds
-        if let scheduledStr = cfgMgr.store["scheduled_time"] as? String {
-            let fmt = DateFormatter()
-            fmt.dateFormat = "yyyy-MM-dd HH:mm:ss"
-            if let date = fmt.date(from: scheduledStr) {
-                let remaining = Int(date.timeIntervalSinceNow.rounded())
-                if remaining > 0 { countdown = min(remaining, countdown) }
-            }
+        // Always start with a fresh countdown, ignoring any previously stored times
+        let countdown = config.countdownSeconds
+        
+        // Clear any previously scheduled time in the config
+        if cfgMgr.store["scheduled_time"] != nil {
+            cfgMgr.clearScheduledStatus()
+            NSLog("AppDelegate: Starting with fresh countdown, cleared previous scheduled time")
         }
+        
+        // Initialize the logger and clear any previously saved state
+        let logger = ActionLogger(stateFilePath: config.stateFilePath,
+                                  historyLogPath: config.historyFilePath)
+        // Clear any previous state to ensure we start with a fresh countdown
+        logger.clearStateFile()
+        
         let state = RebootState(initialSeconds: countdown,
                                 allowedDelayOptions: config.delayOptions,
                                 maxTotalDelay: config.maxTotalDelay)
-        
-        let logger = ActionLogger(stateFilePath: config.stateFilePath,
-                                  historyLogPath: config.historyFilePath)
         
         panelController = PanelController(state: state, logger: logger, config: cfgMgr)
         panelController?.show()
