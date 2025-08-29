@@ -24,14 +24,13 @@ final class ConfigManager {
     }
     
     private(set) var store: [String: Any] = [:]
-    private let path: String
+    private var path: String
     private let queue = DispatchQueue(label: "secops.config", attributes: .concurrent)
     
     init(path: String) {
         // Always use the secure path regardless of the input path
         let secureDir = WritablePathResolver.resolveSecureConfigDir()
-        let securePath = "\(secureDir)/\(WritablePathResolver.configFileName)"
-        self.path = securePath
+        self.path = "\(secureDir)/\(WritablePathResolver.configFileName)"
         
         NSLog("ConfigManager: Using secure path for config file: \(self.path)")
         
@@ -53,9 +52,11 @@ final class ConfigManager {
             
             // Ensure we're using the secure directory
             let secureDir = WritablePathResolver.secureConfigDirectory
-            if !path.contains(secureDir) {
-                NSLog("ConfigManager: Warning - Attempting to use non-secure path. Forcing secure path.")
-                self.path = "\(secureDir)/\(WritablePathResolver.configFileName)"
+            let expectedPath = "\(secureDir)/\(WritablePathResolver.configFileName)"
+            
+            if path != expectedPath {
+                NSLog("ConfigManager: Warning - Not using the expected secure path. Forcing secure path.")
+                path = expectedPath
             }
             
             if fm.fileExists(atPath: path) {
