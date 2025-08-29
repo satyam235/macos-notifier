@@ -12,14 +12,10 @@ struct WritablePathResolver {
         let baseDir: String
     }
     
-    static func resolveConfigDir() -> String {
-        // Simply return /tmp as the directory for configs
-        let tmpDir = configDirectory
-        
-        // No need to create /tmp as it always exists
-        NSLog("Using /tmp for configuration storage")
-        
-        return tmpDir
+    // Keep the original method name for compatibility with existing code
+    static func resolveSecureConfigDir() -> String {
+        return configDirectory
+    }
     }
     
     static func resolve(stateFileName: String = "reboot_state.json",

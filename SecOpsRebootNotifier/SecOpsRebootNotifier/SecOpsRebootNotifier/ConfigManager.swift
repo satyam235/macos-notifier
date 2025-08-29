@@ -49,10 +49,10 @@ final class ConfigManager {
         queue.sync(flags: .barrier) {
             let fm = FileManager.default
             
-            // Simply verify we're using the /tmp path
-            if path != WritablePathResolver.configPath {
+            // Make sure we're using the /tmp path
+            if self.path != WritablePathResolver.configPath {
                 NSLog("ConfigManager: Warning - Not using /tmp path. Correcting.")
-                path = WritablePathResolver.configPath
+                self.path = WritablePathResolver.configPath
             }
             
             if fm.fileExists(atPath: path) {
@@ -84,8 +84,6 @@ final class ConfigManager {
                 // Create empty file
                 persistLocked()
             }
-        }
-    }
         }
     }
     

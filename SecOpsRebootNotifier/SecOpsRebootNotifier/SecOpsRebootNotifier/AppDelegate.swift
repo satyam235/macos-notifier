@@ -8,8 +8,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let arguments = CommandLine.arguments.dropFirst()
         let config = AppConfiguration.parse(from: Array(arguments))
         
-        // Use /tmp directly
-        let cfgPath = "/tmp/SecOpsNotifierConfig.json"
+        // Use /tmp directly - the path will be enforced inside ConfigManager
+        let cfgPath = WritablePathResolver.configPath
         let cfgMgr = ConfigManager(path: cfgPath)
         self.configManager = cfgMgr
         
