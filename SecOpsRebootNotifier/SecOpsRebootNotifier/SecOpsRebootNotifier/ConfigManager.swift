@@ -99,6 +99,7 @@ final class ConfigManager {
             let data = try JSONSerialization.data(withJSONObject: store, options: [.prettyPrinted, .sortedKeys])
             
             // Ensure the directory exists
+            let fm = FileManager.default
             let dir = (path as NSString).deletingLastPathComponent
             if !fm.fileExists(atPath: dir) {
                 try fm.createDirectory(atPath: dir, withIntermediateDirectories: true)
