@@ -12,7 +12,6 @@ import Foundation
 final class ConfigManager {
     enum RebootConfig: String {
         case graceful = "Graceful Reboot"
-        case gracefulLowercase = "Graceful reboot"
         case forceAfterPatch = "Force reboot after patch deployment"
         case other
         init(raw: String?) {
