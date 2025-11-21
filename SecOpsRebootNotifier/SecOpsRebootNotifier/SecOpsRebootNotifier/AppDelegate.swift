@@ -13,8 +13,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let cfgMgr = ConfigManager(path: cfgPath)
         self.configManager = cfgMgr
         
-        // Always start with a fresh countdown, hardcoded to 600 seconds (10 minutes)
-        let countdown = 600 // Hardcoded value as requested
+        // Always start with a fresh countdown, hardcoded to 300 seconds (5 minutes)
+        let countdown = 300 // 5 minutes as requested
         
         // Clear any previously scheduled time in the config
         if cfgMgr.store["scheduled_time"] != nil {
@@ -28,8 +28,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Clear any previous state to ensure we start with a fresh countdown
         logger.clearStateFile()
         
-        // Hardcode delay options to [30, 90] minutes (converted to seconds)
-        let hardcodedDelayOptions = [30 * 60, 90 * 60]
+        // Hardcode delay options to [1, 3, 5] hours (converted to seconds)
+        let hardcodedDelayOptions = [1 * 3600, 3 * 3600, 5 * 3600] // 1hr, 3hr, 5hr
         
         let state = RebootState(initialSeconds: countdown,
                                 allowedDelayOptions: hardcodedDelayOptions,

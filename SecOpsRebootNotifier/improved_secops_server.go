@@ -126,7 +126,12 @@ func initializeApp() error {
 
 	// Set up file paths based on OS
 	if runtime.GOOS == "darwin" {
+		// For macOS, use /tmp directory for config to make it accessible to all users
 		SECOPS_NOTIFIER_CONFIG_FILE_PATH = filepath.Join("/tmp", SECOPS_NOTIFIER_CONFIG_FILE_NAME)
+
+		// Ensure the config file exists and has proper permissions
+		ensureConfigFilePermissions()
+
 		SECOPS_NOTIFIER_FILE_PATH = filepath.Join(securePath, "SecOpsRebootNotifier.app")
 	} else if runtime.GOOS == "windows" {
 		SECOPS_NOTIFIER_CONFIG_FILE_PATH = filepath.Join(securePath, SECOPS_NOTIFIER_CONFIG_FILE_NAME)
@@ -171,7 +176,7 @@ func getSecurePath() (string, error) {
 		return os.TempDir(), nil
 	} else {
 		// On Unix systems, use /tmp explicitly
-		return "/tmp", nil
+		return "/usr/local/bin", nil
 	}
 
 	// No need to create /tmp as it always exists
@@ -179,13 +184,14 @@ func getSecurePath() (string, error) {
 
 // Debug logging function that only outputs when DEBUG is true
 func debugLog(v ...interface{}) {
-	if DEBUG {
-		if logger != nil {
-			logger.Println(append([]interface{}{"[DEBUG]"}, v...)...)
-		} else {
-			log.Println(append([]interface{}{"[DEBUG]"}, v...)...)
-		}
-	}
+	// if DEBUG {
+	// 	if logger != nil {
+	// 		logger.Println(append([]interface{}{"[DEBUG]"}, v...)...)
+	// 	} else {
+	// 		log.Println(append([]interface{}{"[DEBUG]"}, v...)...)
+	// 	}
+	// }
+	log.Println(append([]interface{}{"[DEBUG]"}, v...)...)
 }
 
 // acquireProcessLock ensures only one instance of the application is running
@@ -265,6 +271,9 @@ func parseInt(s string) (int, error) {
 // saveConfigInternal saves the configuration without acquiring the lock
 // This is used internally by loadConfig when the lock is already held
 func saveConfigInternal() error {
+
+	debugLog("Saving config...")
+
 	// Update timestamp
 	SECOPS_NOTIFIER_CONFIG.LastUpdated = time.Now().Format(time.RFC3339)
 
@@ -276,7 +285,12 @@ func saveConfigInternal() error {
 
 	// Write to a temporary file first
 	tmpFile := SECOPS_NOTIFIER_CONFIG_FILE_PATH + ".tmp"
-	if err := os.WriteFile(tmpFile, data, 0640); err != nil {
+	// Set appropriate permissions based on OS
+	var fileMode os.FileMode = 0640
+	if runtime.GOOS == "darwin" {
+		fileMode = 0666 // World-writable for macOS /tmp files to allow different users to modify
+	}
+	if err := os.WriteFile(tmpFile, data, fileMode); err != nil {
 		return fmt.Errorf("error writing temporary config file: %v", err)
 	}
 
@@ -287,9 +301,46 @@ func saveConfigInternal() error {
 
 	// Set proper permissions
 	if runtime.GOOS != "windows" {
-		if err := os.Chmod(SECOPS_NOTIFIER_CONFIG_FILE_PATH, 0640); err != nil {
-			return fmt.Errorf("error setting config file permissions: %v", err)
+		// For macOS, use 0666 (world-writable) for /tmp config file to allow different users to modify
+		// For other Unix systems, use 0640 as before
+		if runtime.GOOS == "darwin" {
+			// First try standard chmod
+			if err := os.Chmod(SECOPS_NOTIFIER_CONFIG_FILE_PATH, 0666); err != nil {
+				logger.Printf("Warning: Could not set config file permissions with chmod: %v", err)
+
+				// If that fails, try using sudo
+				fixCmd := exec.Command("sudo", "chmod", "666", SECOPS_NOTIFIER_CONFIG_FILE_PATH)
+				if err := fixCmd.Run(); err != nil {
+					return fmt.Errorf("error setting config file permissions even with sudo: %v", err)
+				}
+				debugLog("Successfully set permissions using sudo")
+			}
+
+			// For macOS, also ensure the ownership allows the notifier app to write to it
+			// Try to make it owned by the current user or ensure it's world-writable
+			// This is especially important if this process is running as root and the app is not
+			currentUser := getMacOSConsoleUser()
+			if currentUser != "" && currentUser != "root" {
+				fixOwnerCmd := exec.Command("sudo", "chown", currentUser, SECOPS_NOTIFIER_CONFIG_FILE_PATH)
+				if fixOwnerCmd.Run() == nil {
+					debugLog("Successfully changed ownership to current user:", currentUser)
+				}
+			} else {
+				// If we can't determine the current user or we are root, ensure group and other can write
+				fixGroupCmd := exec.Command("sudo", "chmod", "666", SECOPS_NOTIFIER_CONFIG_FILE_PATH)
+				if fixGroupCmd.Run() == nil {
+					debugLog("Successfully ensured world-writable permissions")
+				}
+			}
+		} else {
+			if err := os.Chmod(SECOPS_NOTIFIER_CONFIG_FILE_PATH, 0640); err != nil {
+				return fmt.Errorf("error setting config file permissions: %v", err)
+			}
 		}
+	}
+
+	if _, err := os.Stat(SECOPS_NOTIFIER_CONFIG_FILE_PATH); err == nil {
+		ensureConfigAccess(SECOPS_NOTIFIER_CONFIG_FILE_PATH)
 	}
 
 	debugLog("Config saved successfully")
@@ -326,11 +377,11 @@ func loadConfig() error {
 	}
 
 	// Update version if needed
-	if SECOPS_NOTIFIER_CONFIG.Version != VERSION {
-		SECOPS_NOTIFIER_CONFIG.Version = VERSION
-		SECOPS_NOTIFIER_CONFIG.LastUpdated = time.Now().Format(time.RFC3339)
-		return saveConfigInternal() // Use internal version that doesn't lock
-	}
+	// if SECOPS_NOTIFIER_CONFIG.Version != VERSION {
+	// 	SECOPS_NOTIFIER_CONFIG.Version = VERSION
+	// 	SECOPS_NOTIFIER_CONFIG.LastUpdated = time.Now().Format(time.RFC3339)
+	// 	return saveConfigInternal() // Use internal version that doesn't lock
+	// }
 
 	return nil
 }
@@ -388,7 +439,7 @@ func updateConfig(updates map[string]interface{}) error {
 	if err := json.Unmarshal(updatedData, &SECOPS_NOTIFIER_CONFIG); err != nil {
 		return fmt.Errorf("error converting map back to config: %v", err)
 	}
-
+	debugLog("Config updated with changes")
 	// Save updated config
 	return saveConfigInternal() // Use internal version that doesn't lock
 }
@@ -562,15 +613,26 @@ REBOOT_TIME="%s"
 send_wall_message(){ echo "SecOps Solution - Reboot Required: %s. Your system is scheduled to reboot at $REBOOT_TIME." | wall; }
 send_wall_message
 
-# Use flock to prevent race conditions when updating JSON
+# Use macOS-native file locking approach
 update_json() {
-    (
-        flock -x 200
-        sed -i 's/"reboot_now": *[^,}]+/"reboot_now": true/' $JSON_FILE
-    ) 200>"%s.lock"
+    LOCK_FILE="%s.lock"
+    # Try to create the lock file exclusively (will fail if it exists)
+    while ! ln -s /tmp/dummy "$LOCK_FILE" 2>/dev/null; do
+        sleep 0.1
+    done
+    # Critical section
+    sed -i 's/"reboot_now": *[^,}]+/"reboot_now": true/' $JSON_FILE
+    # Release the lock
+    rm -f "$LOCK_FILE"
 }
 
+# Linux uses -d format
 TARGET_TIMESTAMP=$(date -d "$REBOOT_TIME" +%%s 2>/dev/null)
+# If that fails (e.g., on macOS), try the BSD date format
+if [ $? -ne 0 ]; then
+    # macOS/BSD date command syntax
+    TARGET_TIMESTAMP=$(date -j -f "%%Y-%%m-%%d %%H:%%M:%%S" "$REBOOT_TIME" +%%s 2>/dev/null)
+fi
 CURRENT_TIME=$(date +%%s)
 if [[ -z "$TARGET_TIMESTAMP" || $TARGET_TIMESTAMP -le $CURRENT_TIME ]]; then 
     update_json
@@ -614,7 +676,9 @@ NOTIFIER_APP="%s"
 
 # Create notification with the proper message
 msg="SecOps Solution - Reboot Required: %s. Your system is scheduled to reboot at $REBOOT_TIME."
-/usr/bin/osascript -e "display notification \"$msg\" with title \"SecOps Notifier\""
+# Use terminal echo instead of osascript
+/usr/bin/printf "\033]0;SecOps Notifier: Reboot Required\007"
+/usr/bin/printf "\n\n\033[1;34m$msg\033[0m\n\n"
 
 # Check if notifier is already running before launching
 check_notifier_running() {
@@ -622,16 +686,18 @@ check_notifier_running() {
     return $?
 }
 
-# Function to set reboot_now true in JSON with file locking (mac sed syntax)
+# Function to set reboot_now true in JSON with macOS-native file locking
 update_json() {
-    (
-        if flock -n 200; then
-            /usr/bin/sed -i '' 's/"reboot_now": *[^,}][^,}]*/"reboot_now": true/' "$JSON_FILE"
-            flock -u 200
-        else
-            echo "Could not acquire lock for $JSON_FILE" >&2
-        fi
-    ) 200>"$LOCK_FILE"
+    LOCK_FILE="${JSON_FILE}.lock"
+    # Try to create the lock file exclusively (will fail if it exists)
+    if mkdir "$LOCK_FILE" 2>/dev/null; then
+        # Critical section - got the lock
+        /usr/bin/sed -i '' 's/"reboot_now": *[^,}][^,}]*/"reboot_now": true/' "$JSON_FILE"
+        # Release the lock
+        rmdir "$LOCK_FILE"
+    else
+        echo "Could not acquire lock for $JSON_FILE" >&2
+    fi
 }
 
 # Convert scheduled time to epoch (expects format: YYYY-MM-DD HH:MM:SS)
@@ -651,7 +717,9 @@ else
     update_json
     if [ -d "$NOTIFIER_APP" ] && ! check_notifier_running; then
         /usr/bin/open "$NOTIFIER_APP"
-        /usr/bin/osascript -e "display notification \"Launching reboot notifier...\" with title \"SecOps Notifier\""
+        # Use terminal echo instead of osascript
+        /usr/bin/printf "\033]0;SecOps Notifier\007"
+        /usr/bin/printf "\n\n\033[1;34mLaunching reboot notifier...\033[0m\n\n"
     fi
 fi
 `, SECOPS_NOTIFIER_CONFIG_FILE_PATH, SECOPS_NOTIFIER_CONFIG_FILE_PATH, scheduledTime, appPath, reboot_custom_message)
@@ -736,19 +804,24 @@ func scheduleRebootNowTask(c *SecOpsNotifierConfig) {
 		script := fmt.Sprintf(`#!/bin/bash
 set -e
 MSG="SecOps Solution - Device Will Reboot Shortly: %s. Your system will reboot in 2 minutes."
-/usr/bin/osascript -e "display notification \"$MSG\" with title \"SecOps Notifier\""
+# Use terminal-notify instead of osascript
+/usr/bin/printf "\033]0;SecOps Notifier: Reboot Scheduled\007"
+/usr/bin/printf "\n\n\033[1;31m$MSG\033[0m\n\n"
 sleep 120
-/usr/bin/osascript -e "display notification \"Rebooting now...\" with title \"SecOps Notifier\""
+/usr/bin/printf "\033]0;SecOps Notifier: Rebooting Now\007"
+/usr/bin/printf "\n\n\033[1;31mRebooting now...\033[0m\n\n"
 
 # The actual reboot command would be uncommented in production
 # sudo /sbin/shutdown -r now
-`, escapeAppleScriptString(msg))
+`, escapeCmdString(msg))
 
 		// Write script with secure permissions
 		if err := os.WriteFile(scriptPath, []byte(script), 0750); err != nil {
 			log.Printf("Error writing mac reboot script: %v", err)
 			return
 		}
+
+		log.Printf("macOS reboot script written to: %s", scriptPath)
 
 		// Start the script
 		if err := exec.Command("bash", scriptPath).Start(); err != nil {
@@ -760,15 +833,22 @@ sleep 120
 	}
 }
 
-// escapeAppleScriptString escapes quotes in strings for AppleScript
-func escapeAppleScriptString(s string) string {
+// No longer needed as we removed osascript dependency
+// escapeCmdString escapes quotes for command strings
+func escapeCmdString(s string) string {
 	return strings.ReplaceAll(s, `"`, `\"`)
 }
 
 // checkIfRebootRequired checks if system needs a reboot
 func checkIfRebootRequired() (bool, error) {
-	return true, nil
 	debugLog("checkIfRebootRequired start", "GOOS=", runtime.GOOS)
+
+	// For testing, always return true until platform-specific checks are fully tested
+	if true {
+		return true, nil
+	}
+
+	// The code below is preserved for future use when ready to implement full platform checks
 
 	if runtime.GOOS == "windows" {
 		CHECK := ` $progressPreference='SilentlyContinue'; $rebootPending=Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based Servicing\\RebootPending'; $rebootRequired=Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\RebootRequired'; if($rebootPending -or $rebootRequired){Write-Output 'A restart is required.'} else {Write-Output 'No restart required.'}`
@@ -798,7 +878,6 @@ echo "No reboot"`
 		}
 		return strings.Contains(string(output), "System requires a reboot"), nil
 	} else if runtime.GOOS == "darwin" {
-		return true, nil
 		// Check for pending macOS updates that require reboot
 		// First check if SoftwareUpdate indicates pending restart
 		cmd := exec.Command("bash", "-c", "softwareupdate -l | grep -i 'restart required'")
@@ -1061,12 +1140,145 @@ func copyFile(src, dst string) error {
 	return nil
 }
 
+// Utility function to ensure config file has proper permissions
+func ensureConfigFilePermissions() {
+	if runtime.GOOS != "darwin" {
+		return
+	}
+
+	// Check if file exists
+	fileInfo, err := os.Stat(SECOPS_NOTIFIER_CONFIG_FILE_PATH)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// File doesn't exist yet, it will be created with proper permissions when needed
+			debugLog("Config file doesn't exist yet, will be created with proper permissions")
+			return
+		}
+		logger.Printf("Warning: Could not stat config file: %v", err)
+		return
+	}
+
+	// Check current permissions
+	currentPerms := fileInfo.Mode().Perm()
+	if currentPerms != 0666 {
+		debugLog("Config file has incorrect permissions", currentPerms, "fixing to 0666")
+
+		// First try regular chmod
+		if err := os.Chmod(SECOPS_NOTIFIER_CONFIG_FILE_PATH, 0666); err != nil {
+			logger.Printf("Warning: Could not set permissions with chmod: %v", err)
+
+			// If chmod fails, try using sudo to fix permissions
+			fixCmd := exec.Command("sudo", "chmod", "666", SECOPS_NOTIFIER_CONFIG_FILE_PATH)
+			if err := fixCmd.Run(); err != nil {
+				logger.Printf("Warning: Could not set permissions with sudo: %v", err)
+			} else {
+				debugLog("Successfully fixed permissions using sudo")
+			}
+		}
+
+		// Also try to fix ownership - make it owned by current user
+		currentUser := getMacOSConsoleUser()
+		if currentUser != "" {
+			fixOwnerCmd := exec.Command("sudo", "chown", currentUser, SECOPS_NOTIFIER_CONFIG_FILE_PATH)
+			if err := fixOwnerCmd.Run(); err != nil {
+				logger.Printf("Warning: Could not change ownership: %v", err)
+			} else {
+				debugLog("Successfully changed ownership to current user:", currentUser)
+			}
+		}
+	}
+
+	// If file is empty or invalid JSON, this is a common source of problems
+	// Try to fix by initializing a new file with proper permissions
+	if fileInfo.Size() == 0 {
+		debugLog("Config file exists but is empty, recreating with proper permissions")
+		// We'll let loadConfig handle creating the actual content
+		if err := os.Remove(SECOPS_NOTIFIER_CONFIG_FILE_PATH); err != nil {
+			logger.Printf("Warning: Could not remove empty config file: %v", err)
+		}
+	}
+}
+
 // macOS specific helper functions
+
+// getMacOSConsoleUser returns the currently logged-in user on macOS
+func getMacOSConsoleUser() string {
+	if runtime.GOOS != "darwin" {
+		return ""
+	}
+
+	// Use scutil to get the console user
+	cmd := exec.Command("bash", "-c", `scutil <<< "show State:/Users/ConsoleUser" | awk '/Name :/ && ! /loginwindow/ { print $3 }'`)
+	output, err := cmd.Output()
+	if err != nil {
+		debugLog("Error getting console user:", err)
+		return ""
+	}
+
+	// Trim whitespace and return
+	consoleUser := strings.TrimSpace(string(output))
+	if consoleUser == "" {
+		// Fallback to USER environment variable if scutil fails
+		consoleUser = os.Getenv("USER")
+		if consoleUser == "root" {
+			// Try SUDO_USER which often contains the original user when using sudo
+			sudoUser := os.Getenv("SUDO_USER")
+			if sudoUser != "" {
+				consoleUser = sudoUser
+			}
+		}
+	}
+
+	debugLog("Detected macOS console user:", consoleUser)
+	return consoleUser
+}
+
+// Helper function that runs on a regular interval to ensure config file remains accessible
+// This helps handle cases where file permissions or ownership change unexpectedly
+func ensureConfigAccess(filePath string) {
+	// Try all methods to ensure the file is accessible, including:
+	// - Setting permissions to world-writable (666)
+	// - Adjusting ownership if possible
+
+	// Try standard chmod first
+	err := os.Chmod(filePath, 0666)
+	if err != nil {
+		debugLog("Initial chmod failed, trying sudo:", err)
+
+		// If chmod fails, it might be owned by root, try sudo
+		chmodCmd := exec.Command("sudo", "chmod", "666", filePath)
+		if err := chmodCmd.Run(); err != nil {
+			debugLog("Failed to set permissions even with sudo:", err)
+		} else {
+			debugLog("Successfully set permissions using sudo")
+		}
+	}
+
+	// Check current user to adjust ownership if needed
+	currentUser := getMacOSConsoleUser()
+	if currentUser != "" && currentUser != "root" {
+		// Try to make current user the owner
+		chownCmd := exec.Command("sudo", "chown", currentUser, filePath)
+		if err := chownCmd.Run(); err != nil {
+			debugLog("Failed to change ownership:", err)
+
+			// As a last resort, ensure group and others can write
+			chmod2Cmd := exec.Command("sudo", "chmod", "a+rw", filePath)
+			chmod2Cmd.Run()
+		} else {
+			debugLog("Successfully changed ownership to:", currentUser)
+		}
+	}
+}
+
 func macDisplayNotification(msg string) {
 	if runtime.GOOS != "darwin" {
 		return
 	}
-	_ = exec.Command("/usr/bin/osascript", "-e", fmt.Sprintf(`display notification "%s" with title "SecOps Notifier"`, escapeAppleScriptString(msg))).Start()
+	// Use printf to terminal instead of osascript
+	cmd := exec.Command("/usr/bin/printf", fmt.Sprintf("\033]0;%s\007\n\n\033[1;34m%s\033[0m\n\n", "SecOps Notifier", escapeCmdString(msg)))
+	cmd.Stdout = os.Stdout
+	_ = cmd.Start()
 }
 
 func macOpenNotifierApp() {
@@ -1130,6 +1342,9 @@ func main() {
 	fmt.Println("SecOpsNotifierServer starting... (version=", VERSION, ", debug=", DEBUG, ")")
 	debugLog("main entry")
 
+	// Start a goroutine to periodically ensure config file permissions
+	// This helps handle cases where permissions might change unexpectedly
+
 	// Initialize the application
 	if err := initializeApp(); err != nil {
 		fmt.Printf("Error initializing application: %v\n", err)
@@ -1180,9 +1395,12 @@ func main() {
 		} else if runtime.GOOS == "darwin" {
 			// Check if app is running before launching
 			if !macIsAppRunning("SecOpsRebootNotifier") {
+				debugLog("SecOpsRebootNotifier is not running. Launching...")
 				macOpenNotifierApp()
+			} else {
+				debugLog("SecOpsRebootNotifier is already running.")
 			}
-			macDisplayNotification("Reboot required. Scheduling workflow started.")
+			// macDisplayNotification("Reboot required. Scheduling workflow started.")
 		}
 
 		// Main processing loop
@@ -1194,8 +1412,21 @@ func main() {
 				continue
 			}
 
-			scheduledTime := SECOPS_NOTIFIER_CONFIG.ScheduledTime
-			debugLog("scheduledTime=", scheduledTime)
+			debugLog("Config reloaded successfully")
+
+			// Original scheduled time (preserved for reference)
+			originalScheduledTime := SECOPS_NOTIFIER_CONFIG.ScheduledTime
+
+			// DEBUG OVERRIDE: Always set schedule time to 2 minutes from now
+			// Comment out this block to restore original behavior
+			debugLog("DEBUG MODE: Overriding scheduled time to 2 minutes from now")
+			currentTime := time.Now()
+			scheduledTime := currentTime.Add(2 * time.Minute).Format("2006-01-02 15:04:05")
+			debugLog("Original scheduledTime=", originalScheduledTime, ", Debug override=", scheduledTime)
+
+			// Original code (commented out for reference)
+			// scheduledTime := SECOPS_NOTIFIER_CONFIG.ScheduledTime
+			// debugLog("scheduledTime=", scheduledTime)
 
 			if SECOPS_NOTIFIER_CONFIG.TaskScheduled {
 				debugLog("task is scheduled")
@@ -1204,25 +1435,30 @@ func main() {
 			}
 
 			// Format scheduled time if provided
-			if scheduledTime != "" {
-				t, err := time.Parse("2006-01-02 15:04:05", scheduledTime)
-				if err == nil {
-					scheduledTime = t.Format("2006-01-02 15:04:05")
+			// With debug override, scheduledTime should already be in correct format
+
+			// Original conditional code (commented out for debugging)
+			/*
+				if scheduledTime != "" {
+					t, err := time.Parse("2006-01-02 15:04:05", scheduledTime)
+					if err == nil {
+						scheduledTime = t.Format("2006-01-02 15:04:05")
+					} else {
+						log.Printf("Error parsing scheduled time: %v", err)
+					}
 				} else {
-					log.Printf("Error parsing scheduled time: %v", err)
-				}
-			} else {
-				// Set default scheduled time for Linux if not provided
-				if runtime.GOOS == "linux" {
-					currentTime := time.Now()
-					switch SECOPS_NOTIFIER_CONFIG.RebootConfig {
-					case REBOOT_NOW:
-						scheduledTime = currentTime.Add(5 * time.Minute).Format("2006-01-02 15:04:05")
-					case GRACEFUL_REBOOT:
-						scheduledTime = currentTime.Add(15 * time.Minute).Format("2006-01-02 15:04:05")
+					// Set default scheduled time for Linux if not provided
+					if runtime.GOOS == "linux" {
+						currentTime := time.Now()
+						switch SECOPS_NOTIFIER_CONFIG.RebootConfig {
+						case REBOOT_NOW:
+							scheduledTime = currentTime.Add(5 * time.Minute).Format("2006-01-02 15:04:05")
+						case GRACEFUL_REBOOT:
+							scheduledTime = currentTime.Add(15 * time.Minute).Format("2006-01-02 15:04:05")
+						}
 					}
 				}
-			}
+			*/
 
 			// Handle reboot and scheduling logic
 			if runtime.GOOS == "linux" {

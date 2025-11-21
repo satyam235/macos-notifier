@@ -3,25 +3,23 @@ import Foundation
 struct WritablePathResolver {
     // Define the path constants for consistency across the app
     // Using Application Support instead of /tmp to persist across reboots
-    static let configDirectory = "/tmp"
-    // private static func getConfigDirectory() -> String {
-    //     let fm = FileManager.default
-    //     let home = fm.homeDirectoryForCurrentUser
-    //     let configDir = home.appendingPathComponent("Library/Application Support/SecOpsRebootNotifier").path
+    private static func getConfigDirectory() -> String {
+        let fm = FileManager.default
+        let home = fm.homeDirectoryForCurrentUser
+        let configDir = home.appendingPathComponent("Library/Application Support/SecOpsRebootNotifier").path
         
-    //     // Ensure directory exists
-    //     do {
-    //         try fm.createDirectory(atPath: configDir, withIntermediateDirectories: true, attributes: nil)
-    //     } catch {
-    //         print("Warning: Could not create config directory: \(error)")
-    //     }
+        // Ensure directory exists
+        do {
+            try fm.createDirectory(atPath: configDir, withIntermediateDirectories: true, attributes: nil)
+        } catch {
+            print("Warning: Could not create config directory: \(error)")
+        }
         
-    //     return configDir
-    // }
+        return configDir
+    }
     
-    // static let configDirectory = getConfigDirectory()
+    static let configDirectory = getConfigDirectory()
     static let configFileName = "SecOpsNotifierConfig.json"
-    
     static var configPath: String {
         return (configDirectory as NSString).appendingPathComponent(configFileName)
     }

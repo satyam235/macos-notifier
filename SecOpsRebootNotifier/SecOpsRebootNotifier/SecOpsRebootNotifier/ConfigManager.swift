@@ -12,13 +12,18 @@ import Foundation
 final class ConfigManager {
     enum RebootConfig: String {
         case graceful = "Graceful Reboot"
+        case gracefulLowercase = "Graceful reboot"
         case forceAfterPatch = "Force reboot after patch deployment"
         case other
         init(raw: String?) {
-            switch raw?.trimmingCharacters(in: .whitespacesAndNewlines) {
-            case RebootConfig.graceful.rawValue?: self = .graceful
-            case RebootConfig.forceAfterPatch.rawValue?: self = .forceAfterPatch
-            default: self = .other
+            let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Case-insensitive comparison for graceful reboot
+            if trimmed?.lowercased() == "graceful reboot" {
+                self = .graceful
+            } else if trimmed == RebootConfig.forceAfterPatch.rawValue {
+                self = .forceAfterPatch
+            } else {
+                self = .other
             }
         }
     }
@@ -28,7 +33,7 @@ final class ConfigManager {
     private let queue = DispatchQueue(label: "secops.config", attributes: .concurrent)
     
     init(path: String) {
-        // Always use the /tmp path regardless of input
+        // Use the Application Support path
         self.path = WritablePathResolver.configPath
         
         NSLog("ConfigManager: Using path for config file: \(self.path)")
@@ -49,9 +54,9 @@ final class ConfigManager {
         queue.sync(flags: .barrier) {
             let fm = FileManager.default
             
-            // Make sure we're using the /tmp path
+            // Make sure we're using the Application Support path
             if self.path != WritablePathResolver.configPath {
-                NSLog("ConfigManager: Warning - Not using /tmp path. Correcting.")
+                NSLog("ConfigManager: Warning - Not using correct config path. Correcting.")
                 self.path = WritablePathResolver.configPath
             }
             
@@ -93,9 +98,13 @@ final class ConfigManager {
         do {
             let data = try JSONSerialization.data(withJSONObject: store, options: [.prettyPrinted, .sortedKeys])
             
-            // /tmp always exists, so no need to create it
+            // Ensure the directory exists
+            let dir = (path as NSString).deletingLastPathComponent
+            if !fm.fileExists(atPath: dir) {
+                try fm.createDirectory(atPath: dir, withIntermediateDirectories: true)
+            }
             
-            // Write the file directly to /tmp
+            // Write the file to Application Support
             try data.write(to: URL(fileURLWithPath: path), options: .atomic)
             
             NSLog("ConfigManager: Successfully wrote to config file: \(path)")
