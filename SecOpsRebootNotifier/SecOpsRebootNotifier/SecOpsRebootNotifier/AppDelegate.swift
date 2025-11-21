@@ -28,8 +28,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Clear any previous state to ensure we start with a fresh countdown
         logger.clearStateFile()
         
-        // Hardcode delay options to [1, 3, 5] hours (converted to seconds)
-        let hardcodedDelayOptions = [1 * 3600, 3 * 3600, 5 * 3600] // 1hr, 3hr, 5hr
+        // Hardcode delay options to [1, 2, 6] hours (converted to seconds)
+        let hardcodedDelayOptions = [1 * 3600, 2 * 3600, 6 * 3600] // 1hr, 2hr, 6hr
         
         let state = RebootState(initialSeconds: countdown,
                                 allowedDelayOptions: hardcodedDelayOptions,
