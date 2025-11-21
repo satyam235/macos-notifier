@@ -7,7 +7,7 @@ class PanelController: NSObject {
     private var timer: DispatchSourceTimer?
     
     // MARK: - Panel geometry - hardcoded values
-    private let panelWidth: CGFloat = 320  // Hardcoded width as requested
+    private let panelWidth: CGFloat = 380  // Increased to accommodate countdown + options
     private let topMargin: CGFloat = 16    // Hardcoded top margin as requested
     private let rightMargin: CGFloat = 24  // Hardcoded right margin as requested
     private let cornerRadius: CGFloat = 16
@@ -129,9 +129,6 @@ class PanelController: NSObject {
                    color: .labelColor, lines: 1)
         countdownLabel.stringValue = formattedCountdown()
         countdownLabel.isHidden = false // Always show countdown
-        // Debug: Add background to see if label is rendered
-        countdownLabel.wantsLayer = true
-        countdownLabel.layer?.backgroundColor = NSColor.systemYellow.withAlphaComponent(0.2).cgColor
     // Skip paragraph styling to reduce extra spacing
     // applyParagraphStyle(to: bodyLabel)
     // applyParagraphStyle(to: countdownLabel, tighten: true)
