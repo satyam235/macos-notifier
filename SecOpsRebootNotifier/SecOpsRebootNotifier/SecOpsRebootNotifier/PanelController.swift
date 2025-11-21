@@ -128,6 +128,7 @@ class PanelController: NSObject {
     countdownLabel = makeLabel(font: .systemFont(ofSize: 12, weight: .regular),
                    color: .labelColor, lines: 1)
         countdownLabel.stringValue = formattedCountdown()
+        countdownLabel.isHidden = false // Always show countdown
     // Skip paragraph styling to reduce extra spacing
     // applyParagraphStyle(to: bodyLabel)
     // applyParagraphStyle(to: countdownLabel, tighten: true)
@@ -164,6 +165,10 @@ class PanelController: NSObject {
     bottomRow.addArrangedSubview(countdownLabel)
     bottomRow.addArrangedSubview(NSView()) // flexible spacer
     bottomRow.addArrangedSubview(optionsButton)
+    
+    // Ensure countdown label is always visible
+    countdownLabel.setContentHuggingPriority(.defaultHigh, for: .horizontal)
+    countdownLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
 
     backgroundView.addSubview(bottomRow)
 
