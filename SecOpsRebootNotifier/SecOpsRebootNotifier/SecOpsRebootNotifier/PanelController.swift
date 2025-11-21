@@ -7,7 +7,7 @@ class PanelController: NSObject {
     private var timer: DispatchSourceTimer?
     
     // MARK: - Panel geometry - hardcoded values
-    private let panelWidth: CGFloat = 335  // Optimized to fit countdown + options
+    private let panelWidth: CGFloat = 338  // Optimized to fit countdown + options
     private let topMargin: CGFloat = 16    // Hardcoded top margin as requested
     private let rightMargin: CGFloat = 24  // Hardcoded right margin as requested
     private let cornerRadius: CGFloat = 16
