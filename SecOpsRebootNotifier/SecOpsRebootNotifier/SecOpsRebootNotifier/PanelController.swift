@@ -129,6 +129,9 @@ class PanelController: NSObject {
                    color: .labelColor, lines: 1)
         countdownLabel.stringValue = formattedCountdown()
         countdownLabel.isHidden = false // Always show countdown
+        // Debug: Add background to see if label is rendered
+        countdownLabel.wantsLayer = true
+        countdownLabel.layer?.backgroundColor = NSColor.systemYellow.withAlphaComponent(0.2).cgColor
     // Skip paragraph styling to reduce extra spacing
     // applyParagraphStyle(to: bodyLabel)
     // applyParagraphStyle(to: countdownLabel, tighten: true)
@@ -162,13 +165,15 @@ class PanelController: NSObject {
     bottomRow.alignment = .centerY
     bottomRow.spacing = 12
     bottomRow.translatesAutoresizingMaskIntoConstraints = false
+    
+    // Ensure countdown label is always visible with explicit constraints
+    countdownLabel.setContentHuggingPriority(.defaultHigh, for: .horizontal)
+    countdownLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+    countdownLabel.lineBreakMode = .byClipping // Don't truncate
+    
     bottomRow.addArrangedSubview(countdownLabel)
     bottomRow.addArrangedSubview(NSView()) // flexible spacer
     bottomRow.addArrangedSubview(optionsButton)
-    
-    // Ensure countdown label is always visible
-    countdownLabel.setContentHuggingPriority(.defaultHigh, for: .horizontal)
-    countdownLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
 
     backgroundView.addSubview(bottomRow)
 
@@ -195,7 +200,7 @@ class PanelController: NSObject {
             textStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
 
             bottomRow.leadingAnchor.constraint(equalTo: textStack.leadingAnchor),
-            bottomRow.topAnchor.constraint(equalTo: bodyLabel.bottomAnchor, constant: -1),
+            bottomRow.topAnchor.constraint(equalTo: bodyLabel.bottomAnchor, constant: 4),
             bottomRow.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
             bottomRow.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -4),
 
