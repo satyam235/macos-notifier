@@ -1,16 +1,18 @@
 {
-  "base_url": "",
-  "jump_host_base_url": "",
+  "base_url": "https://test.api.app.secopsolution.com/secops/v1.0",
+  "jump_host_base_url": "http://172.28.181.199:5679",
   "task_scheduled": true,
-  "reboot_config": "Graceful Reboot",
+  "reboot_config": "Graceful reboot",
   "reboot_now": false,
   "scheduled_time": "",
-  "patch_record_id_list": null,
-  "identifier": "",
-  "custom_message": "Satyam, Please save your work. You have limited postponements.",
-  "delay_counter": 2,
-  "asset": "",
-  "asset_type": "",
-  "last_updated": "2025-08-29T02:49:07-07:00",
+  "patch_record_id_list": [
+    "1qD2IjoZPf20EZoJO3AG124ffgA4p7CH5jszEOXvm1CoDvltFsh421YuI9ARozB8__k9i6WOp20qsRrYEFS5KA"
+  ],
+  "identifier": "IQ19PhcgUQ0oW38EZzgPeRQwKjs7VhphGgcZXRNcAwBueiVtVgMLKVoODhIOVhU8UWgJIUFWf2cxDyU2MQcLOw4FABp2HREDTz0cX0AhPQ8PEw1lHSouG14bHy1bPVVkWANmEzIFNxcIERsIeA4TAWInDXILAnx8Gxk/I0I5XSgaCSN6Zi8NYAguW0IkVgoqPwAKKn47VQ4+IHYGETlOOitxVyFlIQ87VVIUKTQudB9DKVgpFHtYF0IhKAZqAVF9GlofARALOSEObisKDWA4ZBEqMSlENDsKRG9kQA9QMzJbeiR4FicADCsBDzdRBBczKDI8HEcRG3EPJjo2DhYrWwUBETZNDCIpRAcvfEMvehR2KQ1gFgQfdj42Kg0jIjd5BTpgewc2Fg0bLF4nGR4jeSAWL38QBAAMPlYaFDg4a1YyO1E/PRopaRgAZDpucVQpPxoxHhZ+BBQtLW8UBT8AEAtXZgQECys4LAM7JAF2DzgzCxc5FlVCKFVhX20zBSYlZSNRFhtUODMtfFchQ3oaaAsiDhghNiMoSixkLzA0LBdeFQtPUA05Mgs7CVgVLT4tTRgfIgIrI3sHAXEILCtpEw4BGFchGRMKOSQeYgoWbHQbGz8wHzpkXVMKDmZiOTNeDSpIcDlrFQghFB0HJD9SAWUgExUSE14EMWJhByMxDB0beRc6PjpNFw0qWC1VVGRjfHM/Pm9hBzEqQSkfCCM+IzlFPzJ/bjwHK0sgFG4uEgNCdWdFKUoMPkBGHA==",
+  "custom_message": "hey,satyam, reboot is required",
+  "delay_counter": 3,
+  "asset": "192.168.127.182",
+  "asset_type": "private_remote_asset",
+  "last_updated": "2025-11-20T10:38:07+05:30",
   "version": "2.0.0"
 }
