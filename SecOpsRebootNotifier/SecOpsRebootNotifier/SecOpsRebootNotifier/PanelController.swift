@@ -121,7 +121,9 @@ class PanelController: NSObject {
     bodyLabel.usesSingleLineMode = false
     bodyLabel.setContentCompressionResistancePriority(.defaultHigh, for: .vertical)
     bodyLabel.setContentHuggingPriority(.defaultHigh, for: .vertical)
-    bodyLabel.stringValue = enforceMessageLimit(config?.customMessage ?? "Reboot required to complete important updates.")
+    let customMsg = config?.customMessage ?? "Reboot required to complete important updates."
+    NSLog("PanelController: Custom message from config: '\(customMsg)'")
+    bodyLabel.stringValue = enforceMessageLimit(customMsg)
         
     countdownLabel = makeLabel(font: .systemFont(ofSize: 12, weight: .regular),
                    color: .labelColor, lines: 1)
@@ -416,11 +418,17 @@ private extension PanelController {
         let canDelay: Bool = {
             if state.allowedDelayOptions.isEmpty { return false }
             // If no config, assume delays are permitted
-            guard let cfg = config else { return true }
+            guard let cfg = config else {
+                NSLog("PanelController: No config found, showing delays by default")
+                return true
+            }
+            NSLog("PanelController: Config found - delayCounter: \(cfg.delayCounter), rebootConfig: \(cfg.rebootConfig)")
             if cfg.rebootConfig == .forceAfterPatch { return false }
             return cfg.delayCounter > 0
         }()
 
+        NSLog("PanelController: canDelay = \(canDelay)")
+        
         if canDelay {
             menu.addItem(NSMenuItem.separator())
             for seconds in state.allowedDelayOptions {

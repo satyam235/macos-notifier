@@ -71,6 +71,10 @@ final class ConfigManager {
                     
                     if let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
                         self.store = obj
+                        NSLog("ConfigManager: Successfully loaded config with \(obj.keys.count) keys: \(obj.keys.joined(separator: ", "))")
+                        NSLog("ConfigManager: custom_message = '\(obj["custom_message"] as? String ?? "nil")'")
+                        NSLog("ConfigManager: delay_counter = \(obj["delay_counter"] as? Int ?? -1)")
+                        NSLog("ConfigManager: reboot_config = '\(obj["reboot_config"] as? String ?? "nil")'")
                         normalizeKeysLocked()
                     } else {
                         NSLog("ConfigManager: Config file exists but contains invalid JSON structure. Creating a new config file.")
