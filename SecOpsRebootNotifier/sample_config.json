@@ -14,5 +14,7 @@
   "asset": "192.168.127.182",
   "asset_type": "private_remote_asset",
   "last_updated": "2025-11-20T10:38:07+05:30",
-  "version": "2.0.0"
+  "version": "2.0.0",
+  "countdown_seconds": 300,
+  "delay_options": [1, 2, 6]
 }

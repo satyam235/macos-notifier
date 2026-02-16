@@ -47,6 +47,14 @@ final class ConfigManager {
     var rebootConfig: RebootConfig { RebootConfig(raw: store["reboot_config"] as? String) }
     var delayCounter: Int { store["delay_counter"] as? Int ?? 0 }
     var rebootNowFlag: Bool { store["reboot_now"] as? Bool ?? false }
+    /// countdown_seconds from config (0 means not set — caller should apply its own default)
+    var countdownSeconds: Int { store["countdown_seconds"] as? Int ?? 0 }
+    /// delay_options from config: list of integer hours → converted to seconds.
+    /// Returns empty array when the key is absent (caller should apply its own default).
+    var delayOptionsInSeconds: [Int] {
+        guard let hours = store["delay_options"] as? [Int], !hours.isEmpty else { return [] }
+        return hours.map { $0 * 3600 }
+    }
     
     // MARK: - Load & Save
     private func load() {

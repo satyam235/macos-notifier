@@ -13,26 +13,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let cfgMgr = ConfigManager(path: cfgPath)
         self.configManager = cfgMgr
         
-        // Always start with a fresh countdown, hardcoded to 300 seconds (5 minutes)
-        let countdown = 300 // 5 minutes as requested
-        
+        // Resolve countdown: JSON config → CLI arg → default 300 s
+        let cfgCountdown = cfgMgr.countdownSeconds
+        let countdown = cfgCountdown > 0 ? cfgCountdown : (config.countdownSeconds > 0 ? config.countdownSeconds : 300)
+        NSLog("AppDelegate: countdown = \(countdown)s (config=\(cfgCountdown), cli=\(config.countdownSeconds))")
+
         // Clear any previously scheduled time in the config
         if cfgMgr.store["scheduled_time"] != nil {
             cfgMgr.clearScheduledStatus()
             NSLog("AppDelegate: Starting with fresh countdown, cleared previous scheduled time")
         }
-        
+
         // Initialize the logger and clear any previously saved state
         let logger = ActionLogger(stateFilePath: config.stateFilePath,
                                   historyLogPath: config.historyFilePath)
         // Clear any previous state to ensure we start with a fresh countdown
         logger.clearStateFile()
-        
-        // Hardcode delay options to [1, 2, 6] hours (converted to seconds)
-        let hardcodedDelayOptions = [1 * 3600, 2 * 3600, 6 * 3600] // 1hr, 2hr, 6hr
-        
+
+        // Resolve delay options: JSON config (hours→s) → CLI arg (already in s) → default [1,2,6] hr
+        let cfgDelays = cfgMgr.delayOptionsInSeconds
+        let delayOptions = !cfgDelays.isEmpty ? cfgDelays : (!config.delayOptions.isEmpty ? config.delayOptions : [3600, 7200, 21600])
+        NSLog("AppDelegate: delayOptions = \(delayOptions)")
+
         let state = RebootState(initialSeconds: countdown,
-                                allowedDelayOptions: hardcodedDelayOptions,
+                                allowedDelayOptions: delayOptions,
                                 maxTotalDelay: config.maxTotalDelay)
         
         panelController = PanelController(state: state, logger: logger, config: cfgMgr)

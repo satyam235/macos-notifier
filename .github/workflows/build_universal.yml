@@ -1,0 +1,115 @@
+name: Build macOS Notifier (Universal)
+
+# Triggered manually only — no automatic runs on push/PR.
+on:
+  workflow_dispatch:
+    inputs:
+      configuration:
+        description: 'Build configuration'
+        required: false
+        default: 'Release'
+        type: choice
+        options:
+          - Release
+          - Debug
+
+jobs:
+  build:
+    name: Build universal macOS app (arm64 + x86_64)
+    runs-on: macos-15          # Xcode 16.2 ships with macOS 15 runner
+
+    env:
+      # Paths relative to the repo root
+      XCODEPROJ: SecOpsRebootNotifier/SecOpsRebootNotifier/SecOpsRebootNotifier.xcodeproj
+      SCHEME: SecOpsRebootNotifier
+      APP_NAME: SecOpsRebootNotifier
+      # Resolve configuration: workflow_dispatch input, fallback to Release
+      BUILD_CONFIG: ${{ inputs.configuration || 'Release' }}
+
+    steps:
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # Xcode 16.2 is the version this project was created with.
+      # macos-15 ships with it; we select it explicitly so the build is
+      # reproducible if Apple ever changes the default on the runner.
+      - name: Select Xcode 16.2
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+          xcodebuild -version
+
+      # -----------------------------------------------------------------------
+      - name: Show available macOS SDKs
+        run: xcodebuild -showsdks | grep macosx
+
+      # -----------------------------------------------------------------------
+      # Confirm the shared scheme is visible before we try to build with it.
+      - name: List project schemes
+        run: xcodebuild -project "$XCODEPROJ" -list
+
+      # -----------------------------------------------------------------------
+      # Build for BOTH arm64 (Apple Silicon) and x86_64 (Intel) in a single
+      # invocation.  xcodebuild merges them into one fat Mach-O inside the
+      # .app bundle automatically.
+      #
+      # Key flags:
+      #   ARCHS="arm64 x86_64"   — build both slices
+      #   ONLY_ACTIVE_ARCH=NO    — override the Debug default that restricts
+      #                            to the runner's native arch only
+      #   CODE_SIGN_IDENTITY="-" — ad-hoc signing (no Apple certificate needed)
+      #   CODE_SIGN_STYLE=Manual — prevent Automatic from trying to resolve a
+      #                            provisioning profile on the CI machine
+      - name: Build universal app
+        run: |
+          xcodebuild build \
+            -project "$XCODEPROJ" \
+            -scheme  "$SCHEME" \
+            -configuration "$BUILD_CONFIG" \
+            -sdk macosx \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGN_STYLE=Manual
+
+      # -----------------------------------------------------------------------
+      # Confirm the resulting binary actually contains both slices.
+      # The step fails if lipo reports only a single architecture.
+      - name: Verify universal binary (lipo)
+        run: |
+          APP="$RUNNER_TEMP/DerivedData/Build/Products/$BUILD_CONFIG/$APP_NAME.app"
+
+          echo "=== App bundle ==="
+          ls -la "$APP/Contents/MacOS/"
+
+          echo "=== Architecture report ==="
+          lipo -info "$APP/Contents/MacOS/$APP_NAME"
+
+          # Hard-fail if either slice is missing
+          lipo -info "$APP/Contents/MacOS/$APP_NAME" | grep -q "arm64"  || \
+            { echo "ERROR: arm64 slice not found";  exit 1; }
+          lipo -info "$APP/Contents/MacOS/$APP_NAME" | grep -q "x86_64" || \
+            { echo "ERROR: x86_64 slice not found"; exit 1; }
+
+          echo "Universal binary confirmed."
+
+      # -----------------------------------------------------------------------
+      # Tar the .app bundle so the upload preserves symlinks and permissions
+      # (which a raw folder upload would not).
+      - name: Package .app as tar.gz
+        run: |
+          PRODUCTS="$RUNNER_TEMP/DerivedData/Build/Products/$BUILD_CONFIG"
+          cd "$PRODUCTS"
+          tar -czf "$RUNNER_TEMP/${APP_NAME}.tar.gz" "${APP_NAME}.app"
+          echo "Archive: $(du -sh "$RUNNER_TEMP/${APP_NAME}.tar.gz" | awk '{print $1}')"
+
+      # -----------------------------------------------------------------------
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-universal-${{ env.BUILD_CONFIG }}
+          path: ${{ runner.temp }}/${{ env.APP_NAME }}.tar.gz
+          retention-days: 30
+          if-no-files-found: error
